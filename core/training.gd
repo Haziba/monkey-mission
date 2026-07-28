@@ -126,6 +126,57 @@ const TRAINING_FULLNESS_COST := 2
 ## Shopping is a walk, not a workout.
 const SHOPPING_FULLNESS_COST := 1
 ## Accuracy at or above this leaves the monkey pleased with itself.
+## --- session pacing -------------------------------------------------------
+##
+## DIVERGENCE: every number below is [X]. No source gives a session length, an
+## interest rate, or a rep rate. These are tuned so that an unfriendly, undrilled
+## monkey usually never joins in at all, a middling one joins around halfway and
+## banks a modest count, and a maxed-out one joins almost immediately — which is
+## the dossier's "eventually requiring no prompting for it to begin".
+
+## Wall-clock length of one session, in seconds.
+const SESSION_SECONDS := 30.0
+
+## Interest added by one perfectly-timed tap, before the friendship and
+## discipline multiplier. At the floor multiplier that is far more taps than a
+## session has room for, which is what makes an unfriendly monkey a wasted slot.
+const INTEREST_PER_GOOD_TAP := 0.055
+## An off-beat tap still shows willing, but barely.
+const INTEREST_PER_POOR_TAP := 0.012
+## Interest bleeds away while you are not tapping, so stopping loses ground.
+const INTEREST_DECAY_PER_SECOND := 0.02
+
+## Friendship and discipline both scale how fast interest builds. Friendship
+## decides whether it cares about you; discipline decides whether it knows what
+## is expected. Neither alone is enough.
+const INTEREST_FRIENDSHIP_WEIGHT := 0.6
+const INTEREST_DISCIPLINE_WEIGHT := 0.4
+## Multiplier at zero friendship and zero discipline, and at both maxed.
+const INTEREST_MULT_MIN := 0.35
+const INTEREST_MULT_MAX := 2.6
+
+## Reps the monkey performs per second once it is working, at zero relevant
+## stat, and the bonus at a maxed one. A fitter monkey simply does more.
+const REPS_PER_SECOND_BASE := 1.6
+const REPS_PER_SECOND_AT_CAP := 3.4
+
+## Chance per second that a working monkey drifts off and needs a scold.
+## Discipline suppresses it, which is the clearest thing discipline buys.
+const DISTRACT_CHANCE_PER_SECOND := 0.10
+const DISTRACT_DISCIPLINE_RELIEF := 0.85
+## Reps per second while distracted, as a fraction of the normal rate.
+const DISTRACTED_REP_FRACTION := 0.25
+
+## Discipline moves, dossier §4 [C]: praise a record, scold the chattering.
+## Getting it right teaches; getting it wrong confuses and costs friendship.
+const DISCIPLINE_PER_GOOD_SCOLD := 4
+const DISCIPLINE_PER_GOOD_PRAISE := 3
+const DISCIPLINE_PER_BAD_CALL := -3
+const FRIENDSHIP_PER_BAD_SCOLD := -2
+const FRIENDSHIP_PER_GOOD_PRAISE := 1
+## Praise stops meaning anything if it never stops.
+const MAX_REWARDED_PRAISES := 3
+
 const GOOD_SESSION_ACCURACY := 0.75
 ## Accuracy below this and it got bored and chattery (§4 [C]: "scold when it
 ## chatters and loses focus").
@@ -171,6 +222,78 @@ const SHOP_FREE_CHOICE_BONUS := 1.2
 
 
 ## The outcome of one session. UI reads this and animates; it does not compute.
+## A single training session, modelled as the original describes it: the trainer
+## does the exercise, the monkey watches, and at some point it takes an interest
+## and joins in. Only then do reps count.
+##
+## Dossier §4 [C]: "The monkeys learn to train by copying the actions of the main
+## character whose motions are controlled by a rhythmic pressing of the A button"
+## and "over time, a monkey will learn to imitate these actions for a longer
+## period eventually requiring no prompting for it to begin."
+##
+## So the demonstration is the interactive part and the monkey's own work is not.
+## HG101 calls the hands-off stretch the game's weakest idea; it is kept because
+## it is what the original does, and because the rep counter climbing on its own
+## is the thing Japanese players describe as the appeal (§4 [C]).
+##
+## Pure logic: no timers, no nodes. The UI drives it with `register_tap()` and
+## `tick()` and reads the state back.
+class Session extends RefCounted:
+	enum State {
+		## You are doing the exercise. The monkey is watching. No reps yet.
+		DEMONSTRATING,
+		## It has joined in and now works on its own. Reps accrue. Nothing for
+		## the player to do but watch, praise and scold.
+		WORKING,
+		ENDED,
+	}
+
+	var state: State = State.DEMONSTRATING
+	var activity: Activity = Activity.PUNCHBAG
+	var monkey: Monkey = null
+	## 0.0 to 1.0. Fills while you demonstrate well; the monkey joins at 1.0.
+	var interest: float = 0.0
+	## Reps the MONKEY has done. The trainer's own taps never count.
+	var reps: int = 0
+	var time_left: float = 0.0
+	## Seconds spent demonstrating before it joined; 0 while it never has.
+	var time_to_join: float = 0.0
+	var elapsed: float = 0.0
+	## Quality of the demonstration, 0..1, from the tap verdicts so far.
+	var demo_accuracy: float = 0.0
+	## Set when the monkey is drifting and a scold would be deserved.
+	var distracted: bool = false
+	## Rep count at which the previous best was passed, so the UI can celebrate
+	## the moment rather than only the summary.
+	var beat_record_at: int = -1
+
+	var _good_taps: int = 0
+	var _early_taps: int = 0
+	var _late_taps: int = 0
+	var _total_taps: int = 0
+	var _rep_carry: float = 0.0
+	var _distract_carry: float = 0.0
+	var _praises: int = 0
+	var _scolds: int = 0
+	var _discipline_delta: int = 0
+	var _friendship_delta: int = 0
+	var _rng: MpRng = null
+
+	## Recorded explicitly rather than inferred from `state`: `settle()` moves the
+	## session to ENDED before it decides what to bank, and "not DEMONSTRATING"
+	## would read as joined for every session that simply ran out of time.
+	var _joined: bool = false
+
+	func joined() -> bool:
+		return _joined
+
+	func working() -> bool:
+		return state == State.WORKING
+
+	func finished() -> bool:
+		return state == State.ENDED
+
+
 class Result extends RefCounted:
 	var activity: Activity = Activity.PUNCHBAG
 	var stat: Monkey.Stat = Monkey.Stat.POWER
@@ -188,6 +311,8 @@ class Result extends RefCounted:
 	## True when this beat the monkey's previous best (praise opportunity).
 	var new_personal_best: bool = false
 	var friendship_delta: int = 0
+	## Net discipline change from praise and scold during the session.
+	var discipline_delta: int = 0
 	var fullness_cost: int = 0
 	## The session stopped because the monkey got hungry (dossier §4 [C]).
 	var hunger_interrupt: bool = false
@@ -340,6 +465,186 @@ func _block_reason(monkey: Monkey) -> String:
 ## Run one session. Consumes no slot itself — the caller (GameState) advances
 ## the DayCycle. Applies the gain to `monkey`, clamped at the cap when
 ## GameRules.hard_stat_caps is on.
+## Open a session. Returns null when the monkey will not work at all — an
+## unbefriended, starving or stuffed one (§5 [C], both hunger extremes
+## immobilise). The caller has already spent nothing at this point.
+func begin_session(monkey: Monkey, activity: Activity) -> Session:
+	if monkey == null or activity == Activity.SHOPPING:
+		return null
+	var session := Session.new()
+	session.monkey = monkey
+	session.activity = activity
+	session.time_left = SESSION_SECONDS
+	session._rng = _rng
+	if _block_reason(monkey) != "":
+		session.state = Session.State.ENDED
+	return session
+
+
+## How fast this monkey warms up. Friendship and discipline both count, and
+## neither on its own gets you near the top.
+func interest_multiplier(monkey: Monkey) -> float:
+	if monkey == null:
+		return INTEREST_MULT_MIN
+	var friendly := float(monkey.friendship) / float(Monkey.FRIENDSHIP_MAX)
+	var drilled := float(monkey.discipline) / float(Monkey.DISCIPLINE_MAX)
+	var blend := INTEREST_FRIENDSHIP_WEIGHT * friendly + INTEREST_DISCIPLINE_WEIGHT * drilled
+	return lerpf(INTEREST_MULT_MIN, INTEREST_MULT_MAX, clampf(blend, 0.0, 1.0))
+
+
+## One tap of the trainer's own exercise. Only meaningful while demonstrating —
+## once the monkey has joined in it is working to its own rhythm, not yours.
+func register_tap(session: Session, interval: float) -> TapVerdict:
+	var verdict := classify_interval(interval)
+	if session == null or session.state != Session.State.DEMONSTRATING:
+		return verdict
+	session._total_taps += 1
+	if verdict == TapVerdict.IN_WINDOW:
+		session._good_taps += 1
+		session.interest += INTEREST_PER_GOOD_TAP * interest_multiplier(session.monkey)
+	else:
+		# A cramped or bored tap is not nothing, but it is close to it.
+		if verdict == TapVerdict.EARLY_CRAMP:
+			session._early_taps += 1
+		else:
+			session._late_taps += 1
+		session.interest += INTEREST_PER_POOR_TAP * interest_multiplier(session.monkey)
+	session.demo_accuracy = float(session._good_taps) / float(maxi(1, session._total_taps))
+	if session.interest >= 1.0:
+		session.interest = 1.0
+		session.state = Session.State.WORKING
+		session._joined = true
+		session.time_to_join = session.elapsed
+	return verdict
+
+
+## Advance the clock. The UI calls this every frame; tests call it in slices.
+func tick(session: Session, delta: float) -> void:
+	if session == null or session.state == Session.State.ENDED or delta <= 0.0:
+		return
+	delta = minf(delta, session.time_left)
+	session.elapsed += delta
+	session.time_left -= delta
+
+	if session.state == Session.State.DEMONSTRATING:
+		# Stop tapping and it cools off. Standing still loses ground.
+		session.interest = maxf(0.0, session.interest - INTEREST_DECAY_PER_SECOND * delta)
+	else:
+		_tick_working(session, delta)
+
+	if session.time_left <= 0.0:
+		session.state = Session.State.ENDED
+
+
+func _tick_working(session: Session, delta: float) -> void:
+	var monkey := session.monkey
+	# Drift on and off task. Discipline is what buys attention.
+	var drilled := float(monkey.discipline) / float(Monkey.DISCIPLINE_MAX)
+	var drift_chance := DISTRACT_CHANCE_PER_SECOND * (1.0 - DISTRACT_DISCIPLINE_RELIEF * drilled)
+	session._distract_carry += delta
+	while session._distract_carry >= 1.0:
+		session._distract_carry -= 1.0
+		if session.distracted:
+			# Left alone it drifts back on its own eventually; a scold is faster
+			# and teaches it something.
+			session.distracted = not session._rng.chance(0.5)
+		else:
+			session.distracted = session._rng.chance(drift_chance)
+
+	var rate := _rep_rate(session)
+	if session.distracted:
+		rate *= DISTRACTED_REP_FRACTION
+	session._rep_carry += rate * delta
+	while session._rep_carry >= 1.0:
+		session._rep_carry -= 1.0
+		session.reps += 1
+		var best := personal_best(monkey, session.activity)
+		if best > 0 and session.reps == best + 1 and session.beat_record_at < 0:
+			session.beat_record_at = session.reps
+
+
+func _rep_rate(session: Session) -> float:
+	var monkey := session.monkey
+	var stat := stat_for(session.activity)
+	var cap := maxi(1, monkey.get_cap(stat))
+	var fitness := clampf(float(monkey.get_stat(stat)) / float(cap), 0.0, 1.0)
+	return lerpf(REPS_PER_SECOND_BASE, REPS_PER_SECOND_AT_CAP, fitness)
+
+
+## Praise. Dossier §4 [C]: "Praise your monkey when they do something good like
+## make a record training." Praise for nothing teaches nothing.
+func praise_in_session(session: Session) -> bool:
+	if session == null or not session.working():
+		return false
+	var deserved := session.beat_record_at >= 0 and not session.distracted
+	session._praises += 1
+	if deserved and session._praises <= MAX_REWARDED_PRAISES:
+		session._discipline_delta += DISCIPLINE_PER_GOOD_PRAISE
+		session._friendship_delta += FRIENDSHIP_PER_GOOD_PRAISE
+		return true
+	session._discipline_delta += DISCIPLINE_PER_BAD_CALL
+	return false
+
+
+## Scold. Dossier §4 [C]: "You should get angry at your monkey when they are
+## chattering around when they are supposed to be training." Scolding a monkey
+## that is working costs you friendship, which is exactly the trap.
+func scold_in_session(session: Session) -> bool:
+	if session == null or not session.working():
+		return false
+	session._scolds += 1
+	if session.distracted:
+		session.distracted = false
+		session._discipline_delta += DISCIPLINE_PER_GOOD_SCOLD
+		return true
+	session._discipline_delta += DISCIPLINE_PER_BAD_CALL
+	session._friendship_delta += FRIENDSHIP_PER_BAD_SCOLD
+	return false
+
+
+## Close the session and bank it. A monkey that never joined in gets nothing —
+## the half-day is spent regardless, which is the cost of a monkey that does not
+## trust you yet.
+func settle(session: Session) -> Result:
+	if session == null:
+		return null
+	session.state = Session.State.ENDED
+	var monkey := session.monkey
+
+	if not session.joined():
+		var refused := Result.new()
+		refused.activity = session.activity
+		refused.stat = stat_for(session.activity)
+		refused.message = "%s WATCHED, BUT NEVER JOINED IN." % monkey.monkey_name.to_upper()
+		_apply_session_deltas(session, refused)
+		session_finished.emit(refused)
+		return refused
+
+	# The demonstration's quality carries into the gain: a scrappy demo still
+	# convinces the monkey eventually, it just wastes session time doing it.
+	var score := RhythmScore.new()
+	score.reps = session.reps
+	score.perfect = session._good_taps
+	score.early = session._early_taps
+	score.late = session._late_taps
+	score.duration_s = session.elapsed
+	var result := perform(monkey, session.activity, score)
+	_apply_session_deltas(session, result)
+	return result
+
+
+func _apply_session_deltas(session: Session, result: Result) -> void:
+	var monkey := session.monkey
+	if session._discipline_delta != 0:
+		monkey.discipline = clampi(
+			monkey.discipline + session._discipline_delta, 0, Monkey.DISCIPLINE_MAX)
+	if session._friendship_delta != 0:
+		monkey.friendship = clampi(
+			monkey.friendship + session._friendship_delta, 0, Monkey.FRIENDSHIP_MAX)
+		result.friendship_delta += session._friendship_delta
+	result.discipline_delta = session._discipline_delta
+
+
 func perform(monkey: Monkey, activity: Activity, score: RhythmScore) -> Result:
 	var result := Result.new()
 	result.activity = activity

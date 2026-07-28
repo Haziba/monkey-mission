@@ -751,3 +751,226 @@ func test_session_finished_fires_for_training_and_shopping() -> void:
 	assert_eq(seen.size(), 2, "the UI listens on this signal")
 	assert_eq(seen[0].activity, Training.Activity.PUNCHBAG)
 	assert_eq(seen[1].activity, Training.Activity.SHOPPING)
+
+
+# --- the demonstrate-then-copy session ---------------------------------------
+#
+# Dossier §4 [C]: the trainer does the exercise and the monkey copies, and "over
+# time, a monkey will learn to imitate these actions for a longer period
+# eventually requiring no prompting for it to begin". So the player demonstrates,
+# the monkey watches, and only once it joins in do reps count toward anything.
+
+## Tap on the beat until the monkey joins or `limit` taps have gone by.
+func _demonstrate(session: Training.Session, limit: int = 400) -> int:
+	var taps := 0
+	while taps < limit and session.state == Training.Session.State.DEMONSTRATING:
+		training.register_tap(session, Training.BEAT_INTERVAL)
+		taps += 1
+	return taps
+
+
+func test_a_session_starts_with_the_monkey_only_watching() -> void:
+	var session := training.begin_session(_monkey(), Training.Activity.PUNCHBAG)
+	assert_not_null(session)
+	assert_eq(session.state, Training.Session.State.DEMONSTRATING)
+	assert_eq(session.reps, 0, "the monkey has not joined in, so nothing counts")
+	assert_false(session.joined())
+
+
+func test_the_trainers_own_taps_never_count_as_reps() -> void:
+	var session := training.begin_session(_monkey(), Training.Activity.PUNCHBAG)
+	for i in 5:
+		training.register_tap(session, Training.BEAT_INTERVAL)
+	assert_eq(session.reps, 0, "you doing press-ups is not the monkey doing press-ups")
+	assert_true(session.interest > 0.0, "but it is watching")
+
+
+func test_tapping_on_the_beat_eventually_convinces_it() -> void:
+	var session := training.begin_session(_monkey(), Training.Activity.PUNCHBAG)
+	_demonstrate(session)
+	assert_eq(session.state, Training.Session.State.WORKING,
+		"a friendly monkey should join in after a decent demonstration")
+	assert_true(session.joined())
+
+
+func test_reps_only_accrue_once_it_has_joined_in() -> void:
+	var session := training.begin_session(_monkey(), Training.Activity.PUNCHBAG)
+	training.tick(session, 5.0)
+	assert_eq(session.reps, 0, "watching is not working")
+	_demonstrate(session)
+	training.tick(session, 5.0)
+	assert_true(session.reps > 0, "once it joins in, the count climbs on its own")
+
+
+func test_a_friendly_well_drilled_monkey_needs_far_less_showing() -> void:
+	# The dossier's "eventually requiring no prompting for it to begin".
+	var green := _monkey()
+	green.friendship = 25
+	green.discipline = 0
+	var veteran := _monkey()
+	veteran.friendship = 100
+	veteran.discipline = 100
+
+	var green_taps := _demonstrate(training.begin_session(green, Training.Activity.PUNCHBAG))
+	var veteran_taps := _demonstrate(training.begin_session(veteran, Training.Activity.PUNCHBAG))
+	assert_true(veteran_taps < green_taps,
+		"a drilled monkey joins sooner (%d taps) than a raw one (%d)" % [
+			veteran_taps, green_taps])
+
+
+func test_friendship_alone_does_not_make_a_monkey_drilled() -> void:
+	# Both axes count. A beloved but scatty monkey is still slow to start.
+	var beloved := _monkey()
+	beloved.friendship = 100
+	beloved.discipline = 0
+	var both := _monkey()
+	both.friendship = 100
+	both.discipline = 100
+	assert_true(
+		_demonstrate(training.begin_session(both, Training.Activity.PUNCHBAG))
+			< _demonstrate(training.begin_session(beloved, Training.Activity.PUNCHBAG)),
+		"discipline should still buy something on top of friendship")
+
+
+func test_interest_cools_off_when_you_stop_demonstrating() -> void:
+	var session := training.begin_session(_monkey(), Training.Activity.PUNCHBAG)
+	for i in 4:
+		training.register_tap(session, Training.BEAT_INTERVAL)
+	var peak := session.interest
+	training.tick(session, 4.0)
+	assert_true(session.interest < peak, "standing about should lose its attention")
+
+
+func test_a_session_that_never_convinces_it_banks_nothing() -> void:
+	# The half-day is spent by GameState either way. This is the cost of a monkey
+	# that does not trust you yet.
+	# It would train if you showed it how — but nobody did.
+	var m := _monkey()
+	m.discipline = 0
+	var session := training.begin_session(m, Training.Activity.PUNCHBAG)
+	var before := m.get_stat(Monkey.Stat.POWER)
+	training.tick(session, Training.SESSION_SECONDS)
+	var result := training.settle(session)
+	assert_not_null(result)
+	assert_eq(session.reps, 0)
+	assert_eq(result.gain_applied, 0, "no work, no gain")
+	assert_eq(m.get_stat(Monkey.Stat.POWER), before, "and the stat is untouched")
+	assert_true(result.message.contains("NEVER JOINED"),
+		"the player should be told why, not left guessing")
+
+
+func test_a_session_it_joined_banks_the_reps_it_did() -> void:
+	var m := _monkey()
+	var session := training.begin_session(m, Training.Activity.PUNCHBAG)
+	_demonstrate(session)
+	training.tick(session, Training.SESSION_SECONDS)
+	var result := training.settle(session)
+	assert_true(session.reps > 0)
+	assert_eq(result.reps, session.reps, "the result should carry the monkey's own count")
+	assert_true(result.gain_applied > 0, "work should move the stat")
+
+
+func test_the_session_ends_when_the_clock_runs_out() -> void:
+	var session := training.begin_session(_monkey(), Training.Activity.PUNCHBAG)
+	training.tick(session, Training.SESSION_SECONDS + 5.0)
+	assert_eq(session.state, Training.Session.State.ENDED)
+	assert_true(session.finished())
+
+
+func test_a_monkey_that_will_not_train_gets_no_session_at_all() -> void:
+	var m := _monkey()
+	m.friendship = 0        # unbefriended: §5 [C], it bites you instead
+	var session := training.begin_session(m, Training.Activity.PUNCHBAG)
+	assert_eq(session.state, Training.Session.State.ENDED,
+		"an unbefriended monkey does not get a demonstration")
+
+
+func test_the_same_seed_runs_the_same_session() -> void:
+	var counts: Array[int] = []
+	for i in 2:
+		var t := Training.new(GameRules.new(), MpRng.new(4242))
+		var session := t.begin_session(_monkey(), Training.Activity.PUNCHBAG)
+		while session.state == Training.Session.State.DEMONSTRATING:
+			t.register_tap(session, Training.BEAT_INTERVAL)
+		for step in 30:
+			t.tick(session, 1.0)
+		counts.append(session.reps)
+	assert_eq(counts[0], counts[1], "sessions must be reproducible from a seed")
+
+
+# --- praise and scold, and what discipline is for ----------------------------
+
+func test_scolding_a_distracted_monkey_teaches_it() -> void:
+	var m := _monkey()
+	var session := training.begin_session(m, Training.Activity.PUNCHBAG)
+	_demonstrate(session)
+	session.distracted = true
+	var before := m.discipline
+	assert_true(training.scold_in_session(session), "a deserved scold should land")
+	training.settle(session)
+	assert_true(m.discipline > before, "discipline is what a deserved scold buys")
+	assert_false(session.distracted, "and it gets back to work")
+
+
+func test_scolding_a_working_monkey_costs_you() -> void:
+	var m := _monkey()
+	var session := training.begin_session(m, Training.Activity.PUNCHBAG)
+	_demonstrate(session)
+	session.distracted = false
+	var friendship_before := m.friendship
+	var discipline_before := m.discipline
+	assert_false(training.scold_in_session(session), "it was working — that is not deserved")
+	training.settle(session)
+	assert_true(m.friendship < friendship_before, "telling it off for nothing costs trust")
+	assert_true(m.discipline < discipline_before or m.discipline == 0,
+		"and teaches it the wrong lesson")
+
+
+func test_praising_a_record_teaches_it() -> void:
+	var m := _monkey()
+	var session := training.begin_session(m, Training.Activity.PUNCHBAG)
+	_demonstrate(session)
+	session.beat_record_at = 12
+	var before := m.discipline
+	assert_true(training.praise_in_session(session), "a record deserves praise")
+	training.settle(session)
+	assert_true(m.discipline > before)
+
+
+func test_praise_for_nothing_means_nothing() -> void:
+	var m := _monkey()
+	var session := training.begin_session(m, Training.Activity.PUNCHBAG)
+	_demonstrate(session)
+	session.beat_record_at = -1
+	var before := m.discipline
+	assert_false(training.praise_in_session(session), "it has not done anything yet")
+	training.settle(session)
+	assert_true(m.discipline <= before, "constant praise should not teach anything")
+
+
+func test_praise_and_scold_do_nothing_before_it_joins_in() -> void:
+	var session := training.begin_session(_monkey(), Training.Activity.PUNCHBAG)
+	assert_false(training.praise_in_session(session))
+	assert_false(training.scold_in_session(session))
+
+
+func test_discipline_is_reported_on_the_result() -> void:
+	var m := _monkey()
+	var session := training.begin_session(m, Training.Activity.PUNCHBAG)
+	_demonstrate(session)
+	session.distracted = true
+	training.scold_in_session(session)
+	var result := training.settle(session)
+	assert_true(result.discipline_delta > 0, "the UI needs to know it learned something")
+
+
+func test_discipline_never_leaves_its_range() -> void:
+	var m := _monkey()
+	m.discipline = Monkey.DISCIPLINE_MAX
+	var session := training.begin_session(m, Training.Activity.PUNCHBAG)
+	_demonstrate(session)
+	for i in 10:
+		session.distracted = true
+		training.scold_in_session(session)
+	training.settle(session)
+	assert_in_range(m.discipline, 0, Monkey.DISCIPLINE_MAX)

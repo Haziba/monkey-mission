@@ -35,6 +35,7 @@ const FRIENDSHIP_MAX := 100
 ## DIVERGENCE: the numeric threshold is [X]; 20 is chosen so the documented
 ## "fastest path: two bananas" befriending actually lands in one morning.
 const FRIENDSHIP_TRAIN_MIN := 20
+const DISCIPLINE_MAX := 100
 ## Below this the monkey may ignore an in-fight strategy (dossier §6 [C]).
 ## DIVERGENCE: the original's exact obedience curve is [X]. See core/care.gd.
 const FRIENDSHIP_OBEDIENT := 70
@@ -64,6 +65,19 @@ const DIGEST_PER_SLOT := 6
 @export var caps: Dictionary = {}
 
 @export var friendship: int = 0
+## しつけ — how well-drilled the monkey is, 0..DISCIPLINE_MAX.
+##
+## The JP back cover promises 「しつけ次第で、いろんな性格のサルが育つぞ！」 —
+## "depending on how you discipline it, monkeys of all sorts of personalities
+## will grow" — and the guides document praise and scold as real inputs
+## (dossier §4 [C]). Nothing records what discipline actually DRIVES, so:
+##
+## DIVERGENCE: [X]. Here it is the second axis of training alongside friendship.
+## Friendship decides whether the monkey will work with you at all; discipline
+## decides how quickly it stops watching and joins in. A beloved but scatty
+## monkey needs a long demonstration every time; a well-drilled one starts
+## almost at once, which is the dossier's "eventually requiring no prompting".
+@export var discipline: int = 0
 @export var fullness: int = 0
 
 ## Live pools used inside a match and by hunger. `current_strength` is the
@@ -221,6 +235,7 @@ func to_dict() -> Dictionary:
 		"stats": _int_keyed(stats),
 		"caps": _int_keyed(caps),
 		"friendship": friendship,
+		"discipline": discipline,
 		"fullness": fullness,
 		"current_strength": current_strength,
 		"current_stamina": current_stamina,
@@ -253,6 +268,9 @@ static func from_dict(d: Dictionary) -> Monkey:
 		m.set_stat(stat, int(raw_stats.get(stat, 0)))
 
 	m.friendship = clampi(int(d.get("friendship", 0)), 0, FRIENDSHIP_MAX)
+	# Defaults to 0 for saves written before discipline existed, which is simply
+	# an undrilled monkey — no migration needed.
+	m.discipline = clampi(int(d.get("discipline", 0)), 0, DISCIPLINE_MAX)
 	m.fullness = clampi(int(d.get("fullness", 0)), 0, FULLNESS_MAX)
 	m.current_strength = clampi(int(d.get("current_strength", 0)), 0, m.max_strength())
 	m.current_stamina = clampi(int(d.get("current_stamina", 0)), 0, m.max_stamina())
