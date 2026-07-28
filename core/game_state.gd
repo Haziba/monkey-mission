@@ -52,7 +52,13 @@ signal paralysis_ended()
 signal monkey_retired(monkey: Monkey)          ## breeding_destroys_parent = false
 
 # --- training --------------------------------------------------------------
-signal training_started(activity: int)         ## Training.Activity
+signal training_started(activity: int)
+## The monkey stopped watching and started copying. Reps count from here.
+signal monkey_joined_in(activity: int)
+## It drifted off task, or came back to it. A deserved scold costs it nothing.
+signal monkey_focus_changed(distracted: bool)
+## It just passed its own best for this exercise — the praise moment (§4 [C]).
+signal record_beaten(reps: int)         ## Training.Activity
 signal training_finished(result: Training.Result)
 signal personal_best(activity: int, reps: int)
 
@@ -84,6 +90,9 @@ var run: RunState = null
 
 ## The match currently in progress, or null. Owned here so the match screen can
 ## be rebuilt (or backgrounded) without losing the fight.
+## The training session in progress, or null. Held here so a screen never has to
+## own game state it might be popped away from mid-session.
+var current_training: Training.Session = null
 var current_match: MatchResolver = null
 
 ## Last set of offers handed to the UI, so book_opponent(index) means what the
@@ -298,6 +307,74 @@ func can_train() -> bool:
 
 
 ## Runs the session AND consumes the half-day slot.
+## Open a training session: you demonstrate, the monkey watches, and it joins in
+## when it is convinced (dossier §4 [C]). Returns null when it will not work at
+## all. The half-day is NOT spent here — it is spent by `settle_training()`, so
+## a session that cannot even start costs the player nothing.
+func begin_training(activity: int) -> Training.Session:
+	if run == null or run.active_monkey == null:
+		return null
+	if activity == Training.Activity.SHOPPING:
+		return null
+	if not can_train():
+		return null
+	current_training = run.training.begin_session(
+		run.active_monkey, activity as Training.Activity)
+	if current_training != null and current_training.finished():
+		current_training = null
+		return null
+	training_started.emit(activity)
+	return current_training
+
+
+## One tap of the trainer's own exercise. Only counts while demonstrating.
+func training_tap(interval: float) -> Training.TapVerdict:
+	if current_training == null:
+		return Training.TapVerdict.LATE_BORED
+	var was_watching := not current_training.joined()
+	var verdict := run.training.register_tap(current_training, interval)
+	if was_watching and current_training.joined():
+		monkey_joined_in.emit(current_training.activity)
+	return verdict
+
+
+func training_tick(delta: float) -> void:
+	if current_training == null:
+		return
+	var distracted_before := current_training.distracted
+	var reps_before := current_training.reps
+	run.training.tick(current_training, delta)
+	if current_training.distracted != distracted_before:
+		monkey_focus_changed.emit(current_training.distracted)
+	if current_training.beat_record_at >= 0 and reps_before < current_training.beat_record_at:
+		record_beaten.emit(current_training.reps)
+
+
+func training_praise() -> bool:
+	if current_training == null:
+		return false
+	return run.training.praise_in_session(current_training)
+
+
+func training_scold() -> bool:
+	if current_training == null:
+		return false
+	return run.training.scold_in_session(current_training)
+
+
+## Close the session and spend the half-day. A monkey that never joined in banks
+## nothing, but the slot is gone either way — that is the cost of a monkey that
+## does not trust you yet.
+func settle_training() -> Training.Result:
+	if current_training == null:
+		return null
+	var result := run.training.settle(current_training)
+	current_training = null
+	consume_slot()
+	_report_session(result)
+	return result
+
+
 func do_training(activity: int, score: RhythmScore) -> Training.Result:
 	if run == null or run.active_monkey == null:
 		return null

@@ -37,7 +37,8 @@ enum Phase { BLOCKED, LEAD_IN, RUNNING, HUNGER_PAUSE, FINISHED }
 ## sessions run at least a minute. 45s is chosen so the countdown passes through
 ## the attested `0:41` while keeping a phone session short enough to repeat
 ## twice a day without tedium.
-const SESSION_SECONDS := 45.0
+## Session length lives in core so the screen and the model cannot disagree.
+const SESSION_SECONDS := Training.SESSION_SECONDS
 ## Beats of lead-in before the clock starts, so the player can find the tempo.
 const LEAD_IN_SECONDS := 3.0
 ## How much time the rhythm track spans, as a multiple of the beat. Anything
@@ -55,6 +56,7 @@ const INTERRUPT_FOOD_SLOTS := 4
 @onready var _hud: HudBoxes = $Root/Col/Hud
 @onready var _stage: Control = $Root/Col/Stage
 @onready var _monkey_rig: Control = $Root/Col/Stage/MonkeyRig
+@onready var _trainer_rig: Control = $Root/Col/Stage/TrainerRig
 @onready var _rep_float: Label = $Root/Col/Stage/RepFloat
 @onready var _record_banner: Label = $Root/Col/Stage/RecordBanner
 @onready var _track: Control = $Root/Col/Rhythm/Track
@@ -105,6 +107,19 @@ var _interrupted := false
 ## static is implemented (it is still a stub in core/rhythm_score.gd).
 var _tap_times: PackedFloat32Array = PackedFloat32Array()
 
+## Mirrors of the session's state, so a change can be spotted and reacted to
+## rather than re-announced every frame.
+var _was_working := false
+var _was_distracted := false
+## Built in code rather than the scene: the interest meter and the coaching row
+## only exist because the session has two phases, and adding them here keeps the
+## whole demonstrate-then-copy change in one place.
+var _interest_bar: ProgressBar = null
+var _interest_label: Label = null
+var _coach_row: HBoxContainer = null
+var _praise_live: Button = null
+var _scold_live: Button = null
+
 var _hunger_pending := false
 var _hunger_fired := false
 var _judged := false
@@ -113,6 +128,7 @@ var _judged := false
 func _ready() -> void:
 	super()
 	_apply_palette()
+	_build_session_widgets()
 	_tap_button.pressed.connect(_on_tap_pressed)
 	_tap_button.focus_mode = Control.FOCUS_NONE
 	_blocked_back.pressed.connect(func() -> void: close({}))
@@ -144,6 +160,8 @@ func _begin() -> void:
 	var monkey := GameState.monkey()
 	_stage_colours()
 	_layout_track()
+	_was_working = false
+	_was_distracted = false
 	_hud.show_training(SESSION_SECONDS, 0, monkey.monkey_name if monkey != null else "---")
 	_rep_float.text = "0"
 	_record_banner.visible = false
@@ -170,6 +188,108 @@ func _begin() -> void:
 	_lead_left = LEAD_IN_SECONDS
 	_lead_overlay.visible = true
 	_lead_label.text = "%d" % int(ceilf(_lead_left))
+
+
+func _monkey_name() -> String:
+	var monkey := GameState.monkey()
+	return monkey.monkey_name.to_upper() if monkey != null else "IT"
+
+
+## The interest meter and the praise/scold row. Interest is the whole of the
+## demonstration phase — without it the player has no idea whether tapping is
+## achieving anything, which was the single worst thing about the old screen.
+func _build_session_widgets() -> void:
+	var rhythm := $Root/Col/Rhythm as Control
+
+	_interest_label = Label.new()
+	_interest_label.text = "INTEREST"
+	rhythm.add_child(_interest_label)
+
+	_interest_bar = ProgressBar.new()
+	_interest_bar.custom_minimum_size = Vector2(0, 44)
+	_interest_bar.min_value = 0.0
+	_interest_bar.max_value = 1.0
+	_interest_bar.show_percentage = false
+	rhythm.add_child(_interest_bar)
+
+	_coach_row = HBoxContainer.new()
+	_coach_row.add_theme_constant_override("separation", 24)
+	_coach_row.visible = false
+	rhythm.add_child(_coach_row)
+
+	_praise_live = Button.new()
+	_praise_live.text = "PRAISE"
+	_praise_live.custom_minimum_size = Vector2(0, 96)
+	_praise_live.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_praise_live.focus_mode = Control.FOCUS_NONE
+	_praise_live.pressed.connect(_on_praise_live)
+	_coach_row.add_child(_praise_live)
+
+	_scold_live = Button.new()
+	_scold_live.text = "SCOLD"
+	_scold_live.custom_minimum_size = Vector2(0, 96)
+	_scold_live.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_scold_live.focus_mode = Control.FOCUS_NONE
+	_scold_live.pressed.connect(_on_scold_live)
+	_coach_row.add_child(_scold_live)
+
+
+## Which half of the session the player is in, said plainly. Tapping matters
+## only while demonstrating; once it copies, the tap button is dead weight and
+## saying so is kinder than leaving it live and inert.
+func _refresh_phase_ui() -> void:
+	var session := GameState.current_training
+	if session == null:
+		return
+	var watching := not session.joined()
+	_interest_bar.value = session.interest
+	_interest_bar.visible = watching
+	_interest_label.visible = watching
+	if watching:
+		_interest_label.text = "INTEREST  %d%%" % int(round(session.interest * 100.0))
+	_tap_button.disabled = not watching
+	_tap_button.text = "TAP IN TIME" if watching else "IT HAS GOT THE IDEA"
+	_coach_row.visible = not watching
+
+
+func _on_joined_in() -> void:
+	if not _was_working:
+		return
+	# HAPPY, not RECORD: it has taken an interest, it has not achieved anything.
+	Sfx.play(Sfx.Cue.HAPPY)
+	_message.text = "%s IS COPYING YOU!" % _monkey_name()
+	_verdict.text = "IT JOINED IN!"
+	_verdict.add_theme_color_override("font_color", Palette.SELECTION)
+	_refresh_coach_prompt()
+
+
+func _refresh_coach_prompt() -> void:
+	var session := GameState.current_training
+	if session == null:
+		return
+	if session.distracted:
+		_message.text = "%s IS MESSING ABOUT." % _monkey_name()
+	elif session.beat_record_at >= 0:
+		_message.text = "A NEW RECORD! TELL IT SO."
+	else:
+		_message.text = "%s IS WORKING ON ITS OWN." % _monkey_name()
+
+
+func _on_praise_live() -> void:
+	Sfx.click()
+	var landed := GameState.training_praise()
+	_message.text = ("THAT'S THE WAY!" if landed
+		else "IT HASN'T DONE ANYTHING YET.")
+
+
+func _on_scold_live() -> void:
+	Sfx.click()
+	var landed := GameState.training_scold()
+	# Dossier §4 [C]: scold the chattering. Scolding a monkey that is working is
+	# the trap, and it costs trust.
+	_message.text = ("IT GETS BACK TO WORK." if landed
+		else "IT WAS WORKING. THAT WASN'T FAIR.")
+	_refresh_coach_prompt()
 
 
 func _apply_palette() -> void:
@@ -316,34 +436,63 @@ func _process(delta: float) -> void:
 
 func _start_session() -> void:
 	_lead_overlay.visible = false
+	if GameState.begin_training(int(_activity)) == null:
+		# It refused between opening the screen and the lead-in ending.
+		_phase = Phase.BLOCKED
+		_blocked_label.text = GameState.block_reason()
+		_blocked_overlay.visible = true
+		_tap_button.disabled = true
+		return
 	_phase = Phase.RUNNING
 	_elapsed = 0.0
 	_last_tap = 0.0
-	_verdict.text = "GO!"
+	_verdict.text = "SHOW IT HOW!"
 	_verdict.add_theme_color_override("font_color", Palette.SELECTION)
+	_message.text = "%s IS WATCHING YOU." % _monkey_name()
+	_refresh_phase_ui()
 
 
 func _tick(delta: float) -> void:
 	_elapsed += delta
-	var remaining := SESSION_SECONDS - _elapsed
-	_hud.set_countdown(remaining)
+	GameState.training_tick(delta)
+	var session := GameState.current_training
+	if session == null:
+		_finish()
+		return
+
+	_hud.set_countdown(session.time_left)
 	_update_marker()
 
-	# Idling is a failure, not a pause. Dossier §4 [C]: press too slowly and the
-	# monkey loses interest.
-	var window: Dictionary = Training.target_window()
-	if _elapsed - _last_tap > float(window["max_interval"]):
-		_last_tap = _elapsed
-		_late += 1
-		_show_verdict(Training.TapVerdict.LATE_BORED)
-		_update_tally()
+	# Reps are the MONKEY's, and only exist once it has joined in. The trainer's
+	# own taps never count — dossier §4 [C], the monkey copies you, it does not
+	# take credit for your press-ups.
+	if session.reps != _reps:
+		_reps = session.reps
+		_on_rep()
+
+	if session.joined() != _was_working:
+		_was_working = session.joined()
+		_on_joined_in()
+
+	if session.distracted != _was_distracted:
+		_was_distracted = session.distracted
+		_refresh_coach_prompt()
+
+	if not session.joined():
+		# Idling while demonstrating is a failure, not a pause. Dossier §4 [C]:
+		# press too slowly and the monkey loses interest.
+		var window: Dictionary = Training.target_window()
+		if _elapsed - _last_tap > float(window["max_interval"]):
+			_last_tap = _elapsed
+			_show_verdict(Training.TapVerdict.LATE_BORED)
+	_refresh_phase_ui()
 
 	if _hunger_pending and not _hunger_fired \
 			and _elapsed >= SESSION_SECONDS * HUNGER_INTERRUPT_AT:
 		_fire_hunger_interrupt()
 		return
 
-	if remaining <= 0.0:
+	if session.finished() or session.time_left <= 0.0:
 		_finish()
 
 
@@ -364,23 +513,20 @@ func _on_tap_pressed() -> void:
 ## One tap. The interval since the previous tap is classified by CORE — this
 ## screen never decides what "too fast" means.
 func _register_tap() -> void:
+	var session := GameState.current_training
+	if session == null or session.joined():
+		# Once it is copying, it works to its own rhythm. Nothing left to show it.
+		return
 	var interval := _elapsed - _last_tap
 	_last_tap = _elapsed
 	_tap_times.append(_elapsed)
-	var verdict := Training.classify_interval(interval)
-	match verdict:
-		Training.TapVerdict.IN_WINDOW:
-			_perfect += 1
-			_reps += 1
-			_on_rep()
-		Training.TapVerdict.EARLY_CRAMP:
-			# The TRAINER cramps — the rep does not land.
-			_early += 1
-		Training.TapVerdict.LATE_BORED:
-			_late += 1
+	var verdict := GameState.training_tap(interval)
+	# YOU do the exercise. The monkey is watching.
+	_hop(_trainer_rig, -26.0)
 	_show_verdict(verdict)
 	_update_tally()
 	_update_marker()
+	_refresh_phase_ui()
 
 
 func _on_rep() -> void:
@@ -391,10 +537,18 @@ func _on_rep() -> void:
 	var punch := create_tween()
 	punch.tween_property(_rep_float, "scale", Vector2(1.35, 1.35), 0.06)
 	punch.tween_property(_rep_float, "scale", Vector2.ONE, 0.14)
-	var rest := _monkey_rig.position
+	_hop(_monkey_rig, -22.0)
+
+
+## A single bob. Used for both rigs, so the trainer's demonstration and the
+## monkey's copying read as the same motion.
+func _hop(rig: Control, height: float) -> void:
+	if rig == null:
+		return
+	var rest := rig.position
 	var hop := create_tween()
-	hop.tween_property(_monkey_rig, "position", rest + Vector2(0.0, -22.0), 0.08)
-	hop.tween_property(_monkey_rig, "position", rest, 0.16)
+	hop.tween_property(rig, "position", rest + Vector2(0.0, height), 0.08)
+	hop.tween_property(rig, "position", rest, 0.16)
 
 
 func _show_verdict(verdict: Training.TapVerdict) -> void:
@@ -495,17 +649,8 @@ func _finish() -> void:
 	_hud.set_countdown(0.0)
 	_tap_button.disabled = true
 
-	# The one thing core accepts from this scene. It computes the gain; this
-	# screen only reports what happened.
-	var score := RhythmScore.new()
-	score.reps = _reps
-	score.perfect = _perfect
-	score.early = _early
-	score.late = _late
-	score.duration_s = _elapsed
-	score.interrupted = _interrupted
-
-	var result := GameState.do_training(int(_activity), score)
+	# Core owns the whole session; this screen only reports what came back.
+	var result := GameState.settle_training()
 	_show_result(result)
 
 
