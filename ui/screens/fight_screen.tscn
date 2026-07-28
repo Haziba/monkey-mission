@@ -234,10 +234,16 @@ layout_mode = 2
 text = "CORNER ACTION - ONE ONLY, NO TAKING IT BACK"
 autowrap_mode = 3
 
+; Two across, not four. The original's corner-action wording ("BREATHE AND
+; RELAX", "WIPE IT WITH WATER") is the characterful mistranslation the dossier
+; calls out, and it does not fit four to a 1080px row. It used to be trimmed to
+; one word with the full phrase in a tooltip — unreachable on a touchscreen,
+; since a phone has no hover.
 [node name="CornerGrid" type="GridContainer" parent="Root/Bottom/StrategyScroll/StratBox"]
 layout_mode = 2
 theme_override_constants/h_separation = 12
-columns = 4
+theme_override_constants/v_separation = 12
+columns = 2
 
 [node name="C0" type="Button" parent="Root/Bottom/StrategyScroll/StratBox/CornerGrid"]
 layout_mode = 2

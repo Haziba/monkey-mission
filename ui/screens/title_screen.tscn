@@ -40,6 +40,7 @@ grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
 theme_type_variation = &"InkSmallLabel"
+autowrap_mode = 3
 text = "MK2 · A PLACEHOLDER-ART REMAKE"
 horizontal_alignment = 1
 vertical_alignment = 1
@@ -75,7 +76,11 @@ text = "NO SAVED GAME"
 horizontal_alignment = 1
 vertical_alignment = 1
 
+; Hidden: SETTINGS is out of this slice and Router.Screen.SETTINGS has no
+; scene behind it, so pressing it landed the very first screen of the game on
+; the "NOT BUILT YET" placeholder. Unhide it when a settings screen exists.
 [node name="Settings" type="Button" parent="Menu"]
+visible = false
 layout_mode = 2
 focus_neighbor_bottom = NodePath("../NewGame")
 theme_type_variation = &"SmallButton"
@@ -103,6 +108,7 @@ grow_horizontal = 2
 grow_vertical = 0
 mouse_filter = 2
 theme_type_variation = &"InkSmallLabel"
+autowrap_mode = 3
 text = "FAN REMAKE OF MONKEY PUNCHER\nORIGINAL BY ATELIER DOUBLE / TAITO, 2000"
 horizontal_alignment = 1
 vertical_alignment = 1

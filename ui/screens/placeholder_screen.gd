@@ -16,6 +16,10 @@ func _ready() -> void:
 	bg.set_anchors_preset(Control.PRESET_FULL_RECT)
 	add_child(bg)
 	move_child(bg, 0)
+	# Connected here rather than in `on_enter`: a screen can be entered more than
+	# once, and connecting on entry stacks a second handler each time, so one tap
+	# would pop two screens.
+	_back.pressed.connect(func() -> void: Router.pop())
 
 
 func on_enter(params: Dictionary) -> void:
@@ -25,5 +29,4 @@ func on_enter(params: Dictionary) -> void:
 	_label.text = "NOT BUILT YET\n\nRouter.Screen #%d\n%s\n\nparams: %s" % [
 		screen_id, expected, params,
 	]
-	_back.pressed.connect(func() -> void: Router.pop())
 	_back.visible = Router.depth() > 1

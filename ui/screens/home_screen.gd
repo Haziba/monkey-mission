@@ -1,3 +1,4 @@
+class_name HomeScreen
 extends GameScreen
 
 ## HOME — the screen the player lives in.
@@ -58,10 +59,19 @@ const IDLE_BOB_TIME := 0.9
 @onready var _message_panel: PanelContainer = $Root/Col/MessageBox
 @onready var _message: Label = $Root/Col/MessageBox/Text
 @onready var _card: StatCard = $Root/Col/Card
-@onready var _menu: GridContainer = $Root/Col/Menu
+@onready var _menu: GridContainer = $Sheet/Panel/Pad/Body/Menu
+@onready var _action_bar: Button = $ActionBar
+@onready var _sheet: Control = $Sheet
+@onready var _sheet_panel: PanelContainer = $Sheet/Panel
+@onready var _scrim: ColorRect = $Sheet/Scrim
+@onready var _sheet_close: Button = $Sheet/Panel/Pad/Body/Header/Close
 
 var _buttons: Array[Button] = []
 var _bob: Tween = null
+## Slide tween for the action sheet, kept so a fast double-tap cannot leave two
+## tweens fighting over the same offset.
+var _sheet_tween: Tween = null
+var _sheet_open: bool = false
 ## The day this screen last showed the end-of-day card for. Two half-day slots
 ## are spent from screens pushed on top of this one, so the rollover has to be
 ## noticed when control comes back, not when the signal fires.
@@ -176,6 +186,65 @@ func _build_menu() -> void:
 		var slot := index
 		_buttons[index].focus_mode = Control.FOCUS_NONE
 		_buttons[index].pressed.connect(func() -> void: _on_menu_pressed(slot))
+	_build_sheet()
+
+
+## The activity menu lives in a sheet that slides up over the screen, so the room,
+## the message box and the stat card keep the space they need. Closed is the
+## resting state: the player sees their monkey, not a wall of buttons.
+func _build_sheet() -> void:
+	_sheet.visible = false
+	_sheet.mouse_filter = Control.MOUSE_FILTER_STOP
+	_action_bar.focus_mode = Control.FOCUS_NONE
+	_sheet_close.focus_mode = Control.FOCUS_NONE
+	_action_bar.pressed.connect(_open_sheet)
+	_sheet_close.pressed.connect(_close_sheet)
+	# Tapping the dimmed area outside the panel dismisses, which is the gesture
+	# anyone who has used a phone will try first.
+	_scrim.gui_input.connect(func(event: InputEvent) -> void:
+		if event is InputEventMouseButton and event.pressed:
+			_close_sheet())
+
+
+func _sheet_height() -> float:
+	return absf(_sheet_panel.offset_top)
+
+
+func _open_sheet() -> void:
+	if _sheet_open:
+		return
+	_sheet_open = true
+	_sheet.visible = true
+	_scrim.modulate.a = 0.0
+	_sheet_panel.position.y = _sheet_height()
+	_slide_sheet(0.0, 1.0)
+
+
+func _close_sheet() -> void:
+	if not _sheet_open:
+		return
+	_sheet_open = false
+	_slide_sheet(_sheet_height(), 0.0)
+	# Hiding on tween completion rather than immediately, or the panel vanishes
+	# before it has finished sliding out.
+	if _sheet_tween != null:
+		_sheet_tween.finished.connect(_on_sheet_closed, CONNECT_ONE_SHOT)
+
+
+func _on_sheet_closed() -> void:
+	# Guard: the player may have reopened the sheet while it was sliding shut.
+	if not _sheet_open:
+		_sheet.visible = false
+
+
+func _slide_sheet(to_y: float, to_alpha: float) -> void:
+	if _sheet_tween != null and _sheet_tween.is_valid():
+		_sheet_tween.kill()
+	_sheet_tween = create_tween()
+	_sheet_tween.set_parallel(true)
+	_sheet_tween.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+	_sheet_tween.tween_property(_sheet_panel, "position:y", to_y, 0.22)
+	_sheet_tween.tween_property(_scrim, "modulate:a", to_alpha, 0.22)
 
 
 func _apply_palette() -> void:
@@ -318,6 +387,10 @@ func _say(text: String) -> void:
 
 func _on_menu_pressed(slot: int) -> void:
 	Sfx.click()
+	# Every entry either pushes a screen or spends a slot, so the sheet has done
+	# its job by the time one is chosen. Closing here also means the sheet is shut
+	# when a pushed screen pops back to us.
+	_close_sheet()
 	match slot:
 		MenuSlot.SKIPPING:
 			_start_training(Training.Activity.SKIPPING)
@@ -339,6 +412,15 @@ func _on_menu_pressed(slot: int) -> void:
 			Router.push(Router.Screen.ROSTER)
 		MenuSlot.REST:
 			_rest()
+
+
+## A back gesture with the sheet open should shut the sheet, not leave the
+## screen. Returning true vetoes the Router's pop.
+func on_back_requested() -> bool:
+	if _sheet_open:
+		_close_sheet()
+		return true
+	return false
 
 
 ## Spend the half-day waiting. Dossier §2 [C]: every activity costs one half-day

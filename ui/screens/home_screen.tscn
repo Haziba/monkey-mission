@@ -32,7 +32,7 @@ grow_vertical = 2
 theme_override_constants/margin_left = 40
 theme_override_constants/margin_top = 40
 theme_override_constants/margin_right = 40
-theme_override_constants/margin_bottom = 40
+theme_override_constants/margin_bottom = 180
 
 [node name="Col" type="VBoxContainer" parent="Root"]
 layout_mode = 2
@@ -259,55 +259,126 @@ autowrap_mode = 3
 [node name="Card" parent="Root/Col" instance=ExtResource("3_card")]
 layout_mode = 2
 
-[node name="Menu" type="GridContainer" parent="Root/Col"]
+; The eleven activity buttons used to sit inline in this column. At 132px each
+; in two columns they were 900px of an 1920px screen, which squeezed the room
+; scene to nothing and pushed the last row off the bottom edge. They now live in
+; a sheet that slides up over the screen when ACTIONS is pressed.
+
+
+; Anchored to the window rather than sitting in the padded column, so it stays
+; flush against the bottom edge on any aspect ratio instead of floating above
+; the safe-area inset. Root's bottom margin is widened to match its height so
+; the stat card is never hidden behind it.
+
+[node name="ActionBar" type="Button" parent="."]
+layout_mode = 1
+anchors_preset = 12
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_top = -140.0
+grow_horizontal = 2
+grow_vertical = 0
+text = "ACTIONS"
+
+[node name="Sheet" type="Control" parent="."]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Scrim" type="ColorRect" parent="Sheet"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0, 0, 0, 0.6)
+
+[node name="Panel" type="PanelContainer" parent="Sheet"]
+layout_mode = 1
+anchors_preset = 12
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_top = -1180.0
+grow_horizontal = 2
+grow_vertical = 0
+
+[node name="Pad" type="MarginContainer" parent="Sheet/Panel"]
+layout_mode = 2
+theme_override_constants/margin_left = 32
+theme_override_constants/margin_top = 24
+theme_override_constants/margin_right = 32
+theme_override_constants/margin_bottom = 40
+
+[node name="Body" type="VBoxContainer" parent="Sheet/Panel/Pad"]
+layout_mode = 2
+theme_override_constants/separation = 20
+
+[node name="Header" type="HBoxContainer" parent="Sheet/Panel/Pad/Body"]
+layout_mode = 2
+
+[node name="Title" type="Label" parent="Sheet/Panel/Pad/Body/Header"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 1
+text = "WHAT NOW?"
+
+[node name="Close" type="Button" parent="Sheet/Panel/Pad/Body/Header"]
+custom_minimum_size = Vector2(130, 96)
+layout_mode = 2
+text = "X"
+
+[node name="Menu" type="GridContainer" parent="Sheet/Panel/Pad/Body"]
 layout_mode = 2
 theme_override_constants/h_separation = 24
 theme_override_constants/v_separation = 20
 columns = 2
 
-[node name="Btn0" type="Button" parent="Root/Col/Menu"]
+[node name="Btn0" type="Button" parent="Sheet/Panel/Pad/Body/Menu"]
 custom_minimum_size = Vector2(0, 132)
 layout_mode = 2
 size_flags_horizontal = 3
 text = "SKIPPING"
 
-[node name="Btn1" type="Button" parent="Root/Col/Menu"]
+[node name="Btn1" type="Button" parent="Sheet/Panel/Pad/Body/Menu"]
 custom_minimum_size = Vector2(0, 132)
 layout_mode = 2
 size_flags_horizontal = 3
 text = "SIT-UPS"
 
-[node name="Btn2" type="Button" parent="Root/Col/Menu"]
+[node name="Btn2" type="Button" parent="Sheet/Panel/Pad/Body/Menu"]
 custom_minimum_size = Vector2(0, 132)
 layout_mode = 2
 size_flags_horizontal = 3
 text = "PUNCHBAG"
 
-[node name="Btn3" type="Button" parent="Root/Col/Menu"]
+[node name="Btn3" type="Button" parent="Sheet/Panel/Pad/Body/Menu"]
 custom_minimum_size = Vector2(0, 132)
 layout_mode = 2
 size_flags_horizontal = 3
 text = "RUNNING"
 
-[node name="Btn4" type="Button" parent="Root/Col/Menu"]
+[node name="Btn4" type="Button" parent="Sheet/Panel/Pad/Body/Menu"]
 custom_minimum_size = Vector2(0, 132)
 layout_mode = 2
 size_flags_horizontal = 3
 text = "SHOPPING"
 
-[node name="Btn5" type="Button" parent="Root/Col/Menu"]
+[node name="Btn5" type="Button" parent="Sheet/Panel/Pad/Body/Menu"]
 custom_minimum_size = Vector2(0, 132)
 layout_mode = 2
 size_flags_horizontal = 3
 text = "SPARRING"
 
-[node name="Btn6" type="Button" parent="Root/Col/Menu"]
+[node name="Btn6" type="Button" parent="Sheet/Panel/Pad/Body/Menu"]
 custom_minimum_size = Vector2(0, 132)
 layout_mode = 2
 size_flags_horizontal = 3
 text = "FEED"
 
-[node name="Btn7" type="Button" parent="Root/Col/Menu"]
+[node name="Btn7" type="Button" parent="Sheet/Panel/Pad/Body/Menu"]
 custom_minimum_size = Vector2(0, 132)
 layout_mode = 2
 size_flags_horizontal = 3
@@ -317,13 +388,13 @@ text = "MATCH"
 ; `ui/screens/roster_screen.tscn` both shipped, but nothing in the game pushed
 ; either of them — breeding, the game's signature system, was unreachable.
 
-[node name="Btn8" type="Button" parent="Root/Col/Menu"]
+[node name="Btn8" type="Button" parent="Sheet/Panel/Pad/Body/Menu"]
 custom_minimum_size = Vector2(0, 132)
 layout_mode = 2
 size_flags_horizontal = 3
 text = "DATING SHOP"
 
-[node name="Btn9" type="Button" parent="Root/Col/Menu"]
+[node name="Btn9" type="Button" parent="Sheet/Panel/Pad/Body/Menu"]
 custom_minimum_size = Vector2(0, 132)
 layout_mode = 2
 size_flags_horizontal = 3
@@ -336,7 +407,7 @@ text = "ROSTER"
 ; at the top of a day) could never fire. REST spends the half-day and nothing
 ; else, which is the cost of overfeeding rather than an escape from it.
 
-[node name="Btn10" type="Button" parent="Root/Col/Menu"]
+[node name="Btn10" type="Button" parent="Sheet/Panel/Pad/Body/Menu"]
 custom_minimum_size = Vector2(0, 132)
 layout_mode = 2
 size_flags_horizontal = 3

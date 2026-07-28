@@ -177,10 +177,10 @@ func _collect_buttons() -> void:
 	_corner_buttons.clear()
 	for i in MatchResolver.CORNER_LABELS.size():
 		var button: Button = _corner_grid.get_child(i)
-		# The full labels are long; the grid is four across. Keep the original's
-		# wording as the tooltip so the mistranslated flavour survives.
-		button.text = _short_corner_label(i)
-		button.tooltip_text = MatchResolver.corner_label(i as MatchResolver.CornerAction)
+		# The full label goes on the face of the button. It used to be trimmed to
+		# a single word with the real wording in a tooltip, which a touchscreen
+		# never shows — so on the target platform the flavour was invisible.
+		button.text = _wrapped_corner_label(i)
 		button.pressed.connect(_on_corner_pressed.bind(i))
 		_corner_buttons.append(button)
 
@@ -830,15 +830,12 @@ func _paint_fighter(base: Vector2, body: Color, accent: Color,
 		_canvas.draw_circle(body_c + Vector2(-facing * 44.0, 4.0), 26.0, glove)
 
 
-func _short_corner_label(index: int) -> String:
-	# The full strings live in MatchResolver.CORNER_LABELS ("BREATHE AND RELAX",
-	# "WIPE IT WITH WATER"); four across a 1080 screen needs them trimmed.
-	match index:
-		MatchResolver.CornerAction.BANDAGE:
-			return "BANDAGE"
-		MatchResolver.CornerAction.BREATHE:
-			return "BREATHE"
-		MatchResolver.CornerAction.WATER:
-			return "WATER"
-		_:
-			return "ITEM"
+## The original's wording, broken across two lines so it fits a half-width
+## button. Breaking at the last space keeps the first line the longer one, which
+## reads better than splitting in the middle of the phrase.
+func _wrapped_corner_label(index: int) -> String:
+	var label := MatchResolver.corner_label(index as MatchResolver.CornerAction)
+	if label.length() <= 10 or not label.contains(" "):
+		return label
+	var split := label.rfind(" ")
+	return "%s\n%s" % [label.substr(0, split), label.substr(split + 1)]
