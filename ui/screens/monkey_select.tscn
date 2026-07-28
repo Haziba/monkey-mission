@@ -1,0 +1,114 @@
+[gd_scene load_steps=2 format=3]
+
+; "CHOOSE YOUR MONKEY". The five type cards are built in code from SpeciesDb —
+; the layout below is only the frame around them. Portrait 1080x1920, every
+; colour applied from ui/theme/palette.gd in monkey_select.gd.
+
+[ext_resource type="Script" path="res://ui/screens/monkey_select.gd" id="1_monkey_select"]
+
+[node name="MonkeySelect" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_monkey_select")
+
+[node name="Bg" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="Margin" type="MarginContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 40
+theme_override_constants/margin_top = 40
+theme_override_constants/margin_right = 40
+theme_override_constants/margin_bottom = 40
+
+[node name="Box" type="VBoxContainer" parent="Margin"]
+layout_mode = 2
+theme_override_constants/separation = 24
+
+[node name="Header" type="PanelContainer" parent="Margin/Box"]
+layout_mode = 2
+
+[node name="Margin" type="MarginContainer" parent="Margin/Box/Header"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/margin_left = 28
+theme_override_constants/margin_top = 20
+theme_override_constants/margin_right = 28
+theme_override_constants/margin_bottom = 20
+
+[node name="Title" type="Label" parent="Margin/Box/Header/Margin"]
+layout_mode = 2
+mouse_filter = 2
+text = "CHOOSE YOUR MONKEY"
+horizontal_alignment = 1
+autowrap_mode = 3
+
+[node name="Sub" type="Label" parent="Margin/Box"]
+layout_mode = 2
+mouse_filter = 2
+text = ""
+horizontal_alignment = 1
+autowrap_mode = 3
+
+[node name="List" type="ScrollContainer" parent="Margin/Box"]
+layout_mode = 2
+size_flags_vertical = 3
+horizontal_scroll_mode = 0
+
+[node name="Rows" type="VBoxContainer" parent="Margin/Box/List"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 24
+
+[node name="Caps" type="PanelContainer" parent="Margin/Box"]
+layout_mode = 2
+
+[node name="Margin" type="MarginContainer" parent="Margin/Box/Caps"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/margin_left = 28
+theme_override_constants/margin_top = 24
+theme_override_constants/margin_right = 28
+theme_override_constants/margin_bottom = 24
+
+[node name="Body" type="VBoxContainer" parent="Margin/Box/Caps/Margin"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 12
+
+[node name="CapsTitle" type="Label" parent="Margin/Box/Caps/Margin/Body"]
+layout_mode = 2
+mouse_filter = 2
+text = "STARTER CAPS"
+autowrap_mode = 3
+
+[node name="CapsRows" type="VBoxContainer" parent="Margin/Box/Caps/Margin/Body"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 6
+
+[node name="CapsNote" type="Label" parent="Margin/Box/Caps/Margin/Body"]
+layout_mode = 2
+mouse_filter = 2
+text = ""
+autowrap_mode = 3
+
+[node name="Confirm" type="Button" parent="Margin/Box"]
+custom_minimum_size = Vector2(0, 132)
+layout_mode = 2
+text = "TAKE HIM HOME"

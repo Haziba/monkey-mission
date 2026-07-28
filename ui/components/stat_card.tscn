@@ -1,0 +1,232 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://ui/components/stat_card.gd" id="1_stat_card"]
+
+[node name="StatCard" type="PanelContainer"]
+anchors_preset = 10
+anchor_right = 1.0
+offset_bottom = 520.0
+grow_horizontal = 2
+script = ExtResource("1_stat_card")
+
+[node name="Pad" type="MarginContainer" parent="."]
+layout_mode = 2
+theme_override_constants/margin_left = 24
+theme_override_constants/margin_top = 20
+theme_override_constants/margin_right = 24
+theme_override_constants/margin_bottom = 20
+
+[node name="Rows" type="VBoxContainer" parent="Pad"]
+layout_mode = 2
+theme_override_constants/separation = 16
+
+[node name="Columns" type="HBoxContainer" parent="Pad/Rows"]
+layout_mode = 2
+theme_override_constants/separation = 28
+
+[node name="Stats" type="VBoxContainer" parent="Pad/Rows/Columns"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_stretch_ratio = 1.35
+theme_override_constants/separation = 8
+
+[node name="Row0" type="HBoxContainer" parent="Pad/Rows/Columns/Stats"]
+custom_minimum_size = Vector2(0, 44)
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="Name" type="Label" parent="Pad/Rows/Columns/Stats/Row0"]
+custom_minimum_size = Vector2(110, 0)
+layout_mode = 2
+text = "POW"
+vertical_alignment = 1
+
+[node name="Value" type="Label" parent="Pad/Rows/Columns/Stats/Row0"]
+custom_minimum_size = Vector2(110, 0)
+layout_mode = 2
+text = "0"
+horizontal_alignment = 2
+vertical_alignment = 1
+
+[node name="Bar" type="ProgressBar" parent="Pad/Rows/Columns/Stats/Row0"]
+custom_minimum_size = Vector2(0, 26)
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 4
+show_percentage = false
+
+[node name="Row1" type="HBoxContainer" parent="Pad/Rows/Columns/Stats"]
+custom_minimum_size = Vector2(0, 44)
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="Name" type="Label" parent="Pad/Rows/Columns/Stats/Row1"]
+custom_minimum_size = Vector2(110, 0)
+layout_mode = 2
+text = "SPD"
+vertical_alignment = 1
+
+[node name="Value" type="Label" parent="Pad/Rows/Columns/Stats/Row1"]
+custom_minimum_size = Vector2(110, 0)
+layout_mode = 2
+text = "0"
+horizontal_alignment = 2
+vertical_alignment = 1
+
+[node name="Bar" type="ProgressBar" parent="Pad/Rows/Columns/Stats/Row1"]
+custom_minimum_size = Vector2(0, 26)
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 4
+show_percentage = false
+
+[node name="Row2" type="HBoxContainer" parent="Pad/Rows/Columns/Stats"]
+custom_minimum_size = Vector2(0, 44)
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="Name" type="Label" parent="Pad/Rows/Columns/Stats/Row2"]
+custom_minimum_size = Vector2(110, 0)
+layout_mode = 2
+text = "KNOW"
+vertical_alignment = 1
+
+[node name="Value" type="Label" parent="Pad/Rows/Columns/Stats/Row2"]
+custom_minimum_size = Vector2(110, 0)
+layout_mode = 2
+text = "0"
+horizontal_alignment = 2
+vertical_alignment = 1
+
+[node name="Bar" type="ProgressBar" parent="Pad/Rows/Columns/Stats/Row2"]
+custom_minimum_size = Vector2(0, 26)
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 4
+show_percentage = false
+
+[node name="Row3" type="HBoxContainer" parent="Pad/Rows/Columns/Stats"]
+custom_minimum_size = Vector2(0, 44)
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="Name" type="Label" parent="Pad/Rows/Columns/Stats/Row3"]
+custom_minimum_size = Vector2(110, 0)
+layout_mode = 2
+text = "STRG"
+vertical_alignment = 1
+
+[node name="Value" type="Label" parent="Pad/Rows/Columns/Stats/Row3"]
+custom_minimum_size = Vector2(110, 0)
+layout_mode = 2
+text = "0"
+horizontal_alignment = 2
+vertical_alignment = 1
+
+[node name="Bar" type="ProgressBar" parent="Pad/Rows/Columns/Stats/Row3"]
+custom_minimum_size = Vector2(0, 26)
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 4
+show_percentage = false
+
+[node name="Row4" type="HBoxContainer" parent="Pad/Rows/Columns/Stats"]
+custom_minimum_size = Vector2(0, 44)
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="Name" type="Label" parent="Pad/Rows/Columns/Stats/Row4"]
+custom_minimum_size = Vector2(110, 0)
+layout_mode = 2
+text = "STM"
+vertical_alignment = 1
+
+[node name="Value" type="Label" parent="Pad/Rows/Columns/Stats/Row4"]
+custom_minimum_size = Vector2(110, 0)
+layout_mode = 2
+text = "0"
+horizontal_alignment = 2
+vertical_alignment = 1
+
+[node name="Bar" type="ProgressBar" parent="Pad/Rows/Columns/Stats/Row4"]
+custom_minimum_size = Vector2(0, 26)
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 4
+show_percentage = false
+
+[node name="Info" type="VBoxContainer" parent="Pad/Rows/Columns"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 8
+
+[node name="NameLine" type="Label" parent="Pad/Rows/Columns/Info"]
+custom_minimum_size = Vector2(0, 44)
+layout_mode = 2
+text = "NAME: ---"
+vertical_alignment = 1
+
+[node name="RankLine" type="Label" parent="Pad/Rows/Columns/Info"]
+custom_minimum_size = Vector2(0, 44)
+layout_mode = 2
+text = "JSB RANK: -"
+vertical_alignment = 1
+
+[node name="MoneyLine" type="Label" parent="Pad/Rows/Columns/Info"]
+custom_minimum_size = Vector2(0, 44)
+layout_mode = 2
+text = "INCOME  ¥0"
+vertical_alignment = 1
+
+[node name="GenLine" type="Label" parent="Pad/Rows/Columns/Info"]
+custom_minimum_size = Vector2(0, 44)
+layout_mode = 2
+text = "GEN 1"
+vertical_alignment = 1
+
+[node name="RecordLine" type="Label" parent="Pad/Rows/Columns/Info"]
+custom_minimum_size = Vector2(0, 44)
+layout_mode = 2
+text = "0W  0L"
+vertical_alignment = 1
+
+[node name="Meters" type="VBoxContainer" parent="Pad/Rows"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="Friendship" type="VBoxContainer" parent="Pad/Rows/Meters"]
+layout_mode = 2
+theme_override_constants/separation = 4
+
+[node name="Caption" type="Label" parent="Pad/Rows/Meters/Friendship"]
+layout_mode = 2
+text = "FRIENDSHIP -"
+
+[node name="Bar" type="ProgressBar" parent="Pad/Rows/Meters/Friendship"]
+custom_minimum_size = Vector2(0, 30)
+layout_mode = 2
+show_percentage = false
+
+[node name="Fullness" type="VBoxContainer" parent="Pad/Rows/Meters"]
+layout_mode = 2
+theme_override_constants/separation = 4
+
+[node name="Caption" type="Label" parent="Pad/Rows/Meters/Fullness"]
+layout_mode = 2
+text = "FULLNESS -"
+
+[node name="Bar" type="ProgressBar" parent="Pad/Rows/Meters/Fullness"]
+custom_minimum_size = Vector2(0, 30)
+layout_mode = 2
+show_percentage = false
+
+[node name="Status" type="PanelContainer" parent="Pad/Rows"]
+custom_minimum_size = Vector2(0, 72)
+layout_mode = 2
+
+[node name="Text" type="Label" parent="Pad/Rows/Status"]
+layout_mode = 2
+text = "READY."
+horizontal_alignment = 1
+vertical_alignment = 1
+autowrap_mode = 3

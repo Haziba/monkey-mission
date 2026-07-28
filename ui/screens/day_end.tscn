@@ -1,0 +1,117 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://ui/screens/day_end.gd" id="1_day_end"]
+
+[node name="DayEnd" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_day_end")
+
+[node name="Bg" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.106, 0.078, 0.125, 1)
+
+[node name="Margin" type="MarginContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 40
+theme_override_constants/margin_top = 40
+theme_override_constants/margin_right = 40
+theme_override_constants/margin_bottom = 40
+
+[node name="Root" type="VBoxContainer" parent="Margin"]
+layout_mode = 2
+theme_override_constants/separation = 24
+
+[node name="HeaderRow" type="HBoxContainer" parent="Margin/Root"]
+layout_mode = 2
+theme_override_constants/separation = 24
+
+[node name="DayBox" type="PanelContainer" parent="Margin/Root/HeaderRow"]
+layout_mode = 2
+
+[node name="DayMargin" type="MarginContainer" parent="Margin/Root/HeaderRow/DayBox"]
+layout_mode = 2
+theme_override_constants/margin_left = 24
+theme_override_constants/margin_top = 12
+theme_override_constants/margin_right = 24
+theme_override_constants/margin_bottom = 12
+
+[node name="DayLabel" type="Label" parent="Margin/Root/HeaderRow/DayBox/DayMargin"]
+layout_mode = 2
+text = "DAYS 1  PM"
+
+[node name="Spacer" type="Control" parent="Margin/Root/HeaderRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="NameBox" type="PanelContainer" parent="Margin/Root/HeaderRow"]
+layout_mode = 2
+
+[node name="NameMargin" type="MarginContainer" parent="Margin/Root/HeaderRow/NameBox"]
+layout_mode = 2
+theme_override_constants/margin_left = 24
+theme_override_constants/margin_top = 12
+theme_override_constants/margin_right = 24
+theme_override_constants/margin_bottom = 12
+
+[node name="NameLabel" type="Label" parent="Margin/Root/HeaderRow/NameBox/NameMargin"]
+layout_mode = 2
+text = "[FREDDY]"
+
+[node name="Stage" type="PanelContainer" parent="Margin/Root"]
+clip_contents = true
+custom_minimum_size = Vector2(0, 700)
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="StageInner" type="Control" parent="Margin/Root/Stage"]
+layout_mode = 2
+mouse_filter = 2
+
+[node name="SummaryPanel" type="PanelContainer" parent="Margin/Root"]
+layout_mode = 2
+
+[node name="SummaryMargin" type="MarginContainer" parent="Margin/Root/SummaryPanel"]
+layout_mode = 2
+theme_override_constants/margin_left = 32
+theme_override_constants/margin_top = 24
+theme_override_constants/margin_right = 32
+theme_override_constants/margin_bottom = 24
+
+[node name="SummaryList" type="VBoxContainer" parent="Margin/Root/SummaryPanel/SummaryMargin"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="TextBox" type="PanelContainer" parent="Margin/Root"]
+layout_mode = 2
+
+[node name="TextMargin" type="MarginContainer" parent="Margin/Root/TextBox"]
+layout_mode = 2
+theme_override_constants/margin_left = 32
+theme_override_constants/margin_top = 28
+theme_override_constants/margin_right = 32
+theme_override_constants/margin_bottom = 28
+
+[node name="MessageLabel" type="Label" parent="Margin/Root/TextBox/TextMargin"]
+layout_mode = 2
+text = "TOMORROW I'LL ALSO WORK HARD."
+autowrap_mode = 3
+
+[node name="NextButton" type="Button" parent="Margin/Root"]
+custom_minimum_size = Vector2(0, 132)
+layout_mode = 2
+text = "NEXT DAY"

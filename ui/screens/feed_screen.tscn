@@ -1,0 +1,110 @@
+[gd_scene load_steps=3 format=3]
+
+; THE LARDER. Written by the Integration agent: `ui/screens/home_screen.gd`
+; pushes Router.Screen.FEED and `ui/router.gd` declared the path, but no agent
+; ever wrote the scene, so feeding fell through to the placeholder screen and
+; the documented "home -> feed" arrow did not work.
+;
+; Feeding is FREE and costs no half-day slot (dossier §2 [C]).
+
+[ext_resource type="Script" path="res://ui/screens/feed_screen.gd" id="1_feed"]
+[ext_resource type="PackedScene" path="res://ui/components/hud_boxes.tscn" id="2_hud"]
+
+[node name="FeedScreen" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_feed")
+
+[node name="Bg" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="Root" type="MarginContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 40
+theme_override_constants/margin_top = 40
+theme_override_constants/margin_right = 40
+theme_override_constants/margin_bottom = 40
+
+[node name="Col" type="VBoxContainer" parent="Root"]
+layout_mode = 2
+theme_override_constants/separation = 24
+
+[node name="Hud" parent="Root/Col" instance=ExtResource("2_hud")]
+custom_minimum_size = Vector2(0, 104)
+layout_mode = 2
+
+[node name="Title" type="Label" parent="Root/Col"]
+layout_mode = 2
+text = "FEED"
+
+[node name="StatePanel" type="PanelContainer" parent="Root/Col"]
+layout_mode = 2
+
+[node name="StateText" type="Label" parent="Root/Col/StatePanel"]
+layout_mode = 2
+text = ""
+autowrap_mode = 3
+
+[node name="Meters" type="VBoxContainer" parent="Root/Col"]
+layout_mode = 2
+theme_override_constants/separation = 16
+
+[node name="FriendRow" type="HBoxContainer" parent="Root/Col/Meters"]
+layout_mode = 2
+theme_override_constants/separation = 24
+
+[node name="Caption" type="Label" parent="Root/Col/Meters/FriendRow"]
+custom_minimum_size = Vector2(300, 0)
+layout_mode = 2
+text = "FRIENDSHIP"
+vertical_alignment = 1
+
+[node name="FullnessRow" type="HBoxContainer" parent="Root/Col/Meters"]
+layout_mode = 2
+theme_override_constants/separation = 24
+
+[node name="Caption" type="Label" parent="Root/Col/Meters/FullnessRow"]
+custom_minimum_size = Vector2(300, 0)
+layout_mode = 2
+text = "FULLNESS"
+vertical_alignment = 1
+
+[node name="Scroll" type="ScrollContainer" parent="Root/Col"]
+layout_mode = 2
+size_flags_vertical = 3
+horizontal_scroll_mode = 0
+
+[node name="List" type="VBoxContainer" parent="Root/Col/Scroll"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 16
+
+[node name="MessageBox" type="PanelContainer" parent="Root/Col"]
+custom_minimum_size = Vector2(0, 140)
+layout_mode = 2
+
+[node name="Text" type="Label" parent="Root/Col/MessageBox"]
+layout_mode = 2
+text = ""
+autowrap_mode = 3
+vertical_alignment = 1
+
+[node name="Back" type="Button" parent="Root/Col"]
+custom_minimum_size = Vector2(0, 132)
+layout_mode = 2
+text = "DONE"

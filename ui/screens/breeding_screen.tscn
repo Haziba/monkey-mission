@@ -1,0 +1,321 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://ui/screens/breeding_screen.gd" id="1_breeding"]
+
+[node name="BreedingScreen" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_breeding")
+
+[node name="Bg" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.106, 0.078, 0.125, 1)
+
+[node name="Margin" type="MarginContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 40
+theme_override_constants/margin_top = 40
+theme_override_constants/margin_right = 40
+theme_override_constants/margin_bottom = 40
+
+[node name="Root" type="VBoxContainer" parent="Margin"]
+layout_mode = 2
+theme_override_constants/separation = 24
+
+[node name="HeaderRow" type="HBoxContainer" parent="Margin/Root"]
+layout_mode = 2
+theme_override_constants/separation = 24
+
+[node name="DayBox" type="PanelContainer" parent="Margin/Root/HeaderRow"]
+layout_mode = 2
+
+[node name="DayMargin" type="MarginContainer" parent="Margin/Root/HeaderRow/DayBox"]
+layout_mode = 2
+theme_override_constants/margin_left = 24
+theme_override_constants/margin_top = 12
+theme_override_constants/margin_right = 24
+theme_override_constants/margin_bottom = 12
+
+[node name="DayLabel" type="Label" parent="Margin/Root/HeaderRow/DayBox/DayMargin"]
+layout_mode = 2
+text = "DAYS 1"
+
+[node name="Spacer" type="Control" parent="Margin/Root/HeaderRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="MoneyBox" type="PanelContainer" parent="Margin/Root/HeaderRow"]
+layout_mode = 2
+
+[node name="MoneyMargin" type="MarginContainer" parent="Margin/Root/HeaderRow/MoneyBox"]
+layout_mode = 2
+theme_override_constants/margin_left = 24
+theme_override_constants/margin_top = 12
+theme_override_constants/margin_right = 24
+theme_override_constants/margin_bottom = 12
+
+[node name="MoneyLabel" type="Label" parent="Margin/Root/HeaderRow/MoneyBox/MoneyMargin"]
+layout_mode = 2
+text = "¥0"
+
+[node name="Title" type="Label" parent="Margin/Root"]
+layout_mode = 2
+text = "DATING SHOP"
+
+[node name="AdvicePanel" type="PanelContainer" parent="Margin/Root"]
+layout_mode = 2
+
+[node name="AdviceMargin" type="MarginContainer" parent="Margin/Root/AdvicePanel"]
+layout_mode = 2
+theme_override_constants/margin_left = 28
+theme_override_constants/margin_top = 20
+theme_override_constants/margin_right = 28
+theme_override_constants/margin_bottom = 20
+
+[node name="AdviceLabel" type="Label" parent="Margin/Root/AdvicePanel/AdviceMargin"]
+layout_mode = 2
+text = "There is no monkey to pair."
+autowrap_mode = 3
+
+[node name="MenuPanel" type="PanelContainer" parent="Margin/Root"]
+layout_mode = 2
+
+[node name="MenuMargin" type="MarginContainer" parent="Margin/Root/MenuPanel"]
+layout_mode = 2
+theme_override_constants/margin_left = 24
+theme_override_constants/margin_top = 24
+theme_override_constants/margin_right = 24
+theme_override_constants/margin_bottom = 24
+
+[node name="Columns" type="HBoxContainer" parent="Margin/Root/MenuPanel/MenuMargin"]
+layout_mode = 2
+theme_override_constants/separation = 24
+
+[node name="LeftColumn" type="VBoxContainer" parent="Margin/Root/MenuPanel/MenuMargin/Columns"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 16
+
+[node name="RightColumn" type="VBoxContainer" parent="Margin/Root/MenuPanel/MenuMargin/Columns"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 16
+
+[node name="PreviewScroll" type="ScrollContainer" parent="Margin/Root"]
+custom_minimum_size = Vector2(0, 420)
+layout_mode = 2
+size_flags_vertical = 3
+horizontal_scroll_mode = 0
+
+[node name="PreviewBox" type="VBoxContainer" parent="Margin/Root/PreviewScroll"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 20
+
+[node name="Actions" type="HBoxContainer" parent="Margin/Root"]
+layout_mode = 2
+theme_override_constants/separation = 24
+
+[node name="BackButton" type="Button" parent="Margin/Root/Actions"]
+custom_minimum_size = Vector2(0, 132)
+layout_mode = 2
+size_flags_horizontal = 3
+text = "BACK"
+
+[node name="RosterButton" type="Button" parent="Margin/Root/Actions"]
+custom_minimum_size = Vector2(0, 132)
+layout_mode = 2
+size_flags_horizontal = 3
+text = "ROSTER"
+
+[node name="ConfirmButton" type="Button" parent="Margin/Root/Actions"]
+custom_minimum_size = Vector2(0, 132)
+layout_mode = 2
+size_flags_horizontal = 3
+disabled = true
+text = "CHOOSE A PARTNER"
+
+[node name="ConfirmOverlay" type="Control" parent="."]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Dim" type="ColorRect" parent="ConfirmOverlay"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.106, 0.078, 0.125, 0.86)
+
+[node name="Centre" type="MarginContainer" parent="ConfirmOverlay"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 40
+theme_override_constants/margin_top = 120
+theme_override_constants/margin_right = 40
+theme_override_constants/margin_bottom = 120
+
+[node name="ConfirmPanel" type="PanelContainer" parent="ConfirmOverlay/Centre"]
+layout_mode = 2
+size_flags_vertical = 4
+
+[node name="ConfirmMargin" type="MarginContainer" parent="ConfirmOverlay/Centre/ConfirmPanel"]
+layout_mode = 2
+theme_override_constants/margin_left = 36
+theme_override_constants/margin_top = 36
+theme_override_constants/margin_right = 36
+theme_override_constants/margin_bottom = 36
+
+[node name="ConfirmBox" type="VBoxContainer" parent="ConfirmOverlay/Centre/ConfirmPanel/ConfirmMargin"]
+layout_mode = 2
+theme_override_constants/separation = 24
+
+[node name="ConfirmTitle" type="Label" parent="ConfirmOverlay/Centre/ConfirmPanel/ConfirmMargin/ConfirmBox"]
+layout_mode = 2
+text = "PAIR THEM?"
+autowrap_mode = 3
+
+[node name="ConfirmBody" type="Label" parent="ConfirmOverlay/Centre/ConfirmPanel/ConfirmMargin/ConfirmBox"]
+layout_mode = 2
+autowrap_mode = 3
+
+[node name="ConfirmWarning" type="Label" parent="ConfirmOverlay/Centre/ConfirmPanel/ConfirmMargin/ConfirmBox"]
+visible = false
+layout_mode = 2
+autowrap_mode = 3
+
+[node name="NameEdit" type="LineEdit" parent="ConfirmOverlay/Centre/ConfirmPanel/ConfirmMargin/ConfirmBox"]
+custom_minimum_size = Vector2(0, 132)
+layout_mode = 2
+placeholder_text = "NAME THE BABY (BLANK = RANDOM)"
+max_length = 12
+
+[node name="ConfirmButtons" type="HBoxContainer" parent="ConfirmOverlay/Centre/ConfirmPanel/ConfirmMargin/ConfirmBox"]
+layout_mode = 2
+theme_override_constants/separation = 24
+
+[node name="CancelButton" type="Button" parent="ConfirmOverlay/Centre/ConfirmPanel/ConfirmMargin/ConfirmBox/ConfirmButtons"]
+custom_minimum_size = Vector2(0, 132)
+layout_mode = 2
+size_flags_horizontal = 3
+text = "CANCEL"
+
+[node name="PairButton" type="Button" parent="ConfirmOverlay/Centre/ConfirmPanel/ConfirmMargin/ConfirmBox/ConfirmButtons"]
+custom_minimum_size = Vector2(0, 132)
+layout_mode = 2
+size_flags_horizontal = 3
+text = "PAIR THEM"
+
+[node name="RevealOverlay" type="Control" parent="."]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="RevealBg" type="ColorRect" parent="RevealOverlay"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.106, 0.078, 0.125, 1)
+
+[node name="RevealStage" type="Control" parent="RevealOverlay"]
+clip_contents = true
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
+anchor_bottom = 0.42
+grow_horizontal = 2
+mouse_filter = 2
+
+[node name="RevealMargin" type="MarginContainer" parent="RevealOverlay"]
+layout_mode = 1
+anchors_preset = 12
+anchor_top = 0.42
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 0
+mouse_filter = 2
+theme_override_constants/margin_left = 40
+theme_override_constants/margin_top = 24
+theme_override_constants/margin_right = 40
+theme_override_constants/margin_bottom = 40
+
+[node name="RevealBox" type="VBoxContainer" parent="RevealOverlay/RevealMargin"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 20
+
+[node name="BornLabel" type="Label" parent="RevealOverlay/RevealMargin/RevealBox"]
+layout_mode = 2
+text = "WAS BORN."
+horizontal_alignment = 1
+autowrap_mode = 3
+
+[node name="GenLabel" type="Label" parent="RevealOverlay/RevealMargin/RevealBox"]
+visible = false
+layout_mode = 2
+horizontal_alignment = 1
+autowrap_mode = 3
+
+[node name="CapHeader" type="Label" parent="RevealOverlay/RevealMargin/RevealBox"]
+visible = false
+layout_mode = 2
+autowrap_mode = 3
+
+[node name="CapList" type="VBoxContainer" parent="RevealOverlay/RevealMargin/RevealBox"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="FateLabel" type="Label" parent="RevealOverlay/RevealMargin/RevealBox"]
+visible = false
+layout_mode = 2
+size_flags_vertical = 3
+autowrap_mode = 3
+
+[node name="RevealButtons" type="HBoxContainer" parent="RevealOverlay/RevealMargin/RevealBox"]
+visible = false
+layout_mode = 2
+theme_override_constants/separation = 24
+
+[node name="RevealRosterButton" type="Button" parent="RevealOverlay/RevealMargin/RevealBox/RevealButtons"]
+custom_minimum_size = Vector2(0, 132)
+layout_mode = 2
+size_flags_horizontal = 3
+text = "SEE THE ROSTER"
+
+[node name="ContinueButton" type="Button" parent="RevealOverlay/RevealMargin/RevealBox/RevealButtons"]
+custom_minimum_size = Vector2(0, 132)
+layout_mode = 2
+size_flags_horizontal = 3
+text = "CONTINUE"

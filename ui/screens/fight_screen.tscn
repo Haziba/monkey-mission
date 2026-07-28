@@ -1,0 +1,337 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://ui/screens/fight_screen.gd" id="1_fight"]
+[ext_resource type="PackedScene" path="res://ui/components/gauge_pair.tscn" id="2_gauges"]
+
+[node name="FightScreen" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_fight")
+
+[node name="Bg" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="Root" type="VBoxContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 0
+
+[node name="TopBar" type="PanelContainer" parent="Root"]
+custom_minimum_size = Vector2(0, 190)
+layout_mode = 2
+
+[node name="TopRow" type="HBoxContainer" parent="Root/TopBar"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="LeftCorner" type="VBoxContainer" parent="Root/TopBar/TopRow"]
+custom_minimum_size = Vector2(190, 0)
+layout_mode = 2
+theme_override_constants/separation = 0
+alignment = 1
+
+[node name="Code" type="Label" parent="Root/TopBar/TopRow/LeftCorner"]
+layout_mode = 2
+text = "AT"
+horizontal_alignment = 1
+
+[node name="Downs" type="Label" parent="Root/TopBar/TopRow/LeftCorner"]
+layout_mode = 2
+horizontal_alignment = 1
+
+[node name="Clock" type="Label" parent="Root/TopBar/TopRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "1R : 60"
+horizontal_alignment = 1
+vertical_alignment = 1
+autowrap_mode = 2
+clip_text = true
+
+[node name="RightCorner" type="VBoxContainer" parent="Root/TopBar/TopRow"]
+custom_minimum_size = Vector2(190, 0)
+layout_mode = 2
+theme_override_constants/separation = 0
+alignment = 1
+
+[node name="Code" type="Label" parent="Root/TopBar/TopRow/RightCorner"]
+layout_mode = 2
+text = "DF"
+horizontal_alignment = 1
+
+[node name="Downs" type="Label" parent="Root/TopBar/TopRow/RightCorner"]
+layout_mode = 2
+horizontal_alignment = 1
+
+[node name="Ring" type="Control" parent="Root"]
+layout_mode = 2
+size_flags_vertical = 3
+clip_contents = true
+
+[node name="Canvas" type="Control" parent="Root/Ring"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="Shout" type="Label" parent="Root/Ring"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_top = 120.0
+offset_bottom = -260.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+text = "FIGHT!"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="TrustWarning" type="PanelContainer" parent="Root/Ring"]
+layout_mode = 1
+anchors_preset = 12
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 40.0
+offset_top = -104.0
+offset_right = -40.0
+offset_bottom = -16.0
+grow_horizontal = 2
+grow_vertical = 0
+mouse_filter = 2
+
+[node name="Text" type="Label" parent="Root/Ring/TrustWarning"]
+layout_mode = 2
+text = "LOW TRUST"
+horizontal_alignment = 1
+vertical_alignment = 1
+autowrap_mode = 3
+
+[node name="Strip" type="Control" parent="Root"]
+custom_minimum_size = Vector2(0, 240)
+layout_mode = 2
+mouse_filter = 2
+
+[node name="GaugeWrap" type="MarginContainer" parent="Root/Strip"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_constants/margin_left = 32
+theme_override_constants/margin_top = 24
+theme_override_constants/margin_right = 32
+theme_override_constants/margin_bottom = 24
+
+[node name="Gauges" parent="Root/Strip/GaugeWrap" instance=ExtResource("2_gauges")]
+layout_mode = 2
+
+[node name="Commentary" type="PanelContainer" parent="Root/Strip"]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 32.0
+offset_top = 16.0
+offset_right = -32.0
+offset_bottom = -16.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="Text" type="Label" parent="Root/Strip/Commentary"]
+layout_mode = 2
+text = "ROUND 1!"
+horizontal_alignment = 1
+vertical_alignment = 1
+autowrap_mode = 3
+
+[node name="Bottom" type="Control" parent="Root"]
+custom_minimum_size = Vector2(0, 790)
+layout_mode = 2
+mouse_filter = 2
+
+[node name="StrategyScroll" type="ScrollContainer" parent="Root/Bottom"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 32.0
+offset_top = 12.0
+offset_right = -32.0
+offset_bottom = -12.0
+grow_horizontal = 2
+grow_vertical = 2
+horizontal_scroll_mode = 0
+
+[node name="StratBox" type="VBoxContainer" parent="Root/Bottom/StrategyScroll"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 14
+
+[node name="StratTitle" type="Label" parent="Root/Bottom/StrategyScroll/StratBox"]
+layout_mode = 2
+text = "SET YOUR STRATEGY"
+
+[node name="StratGrid" type="GridContainer" parent="Root/Bottom/StrategyScroll/StratBox"]
+layout_mode = 2
+theme_override_constants/h_separation = 16
+theme_override_constants/v_separation = 16
+columns = 2
+
+[node name="S0" type="Button" parent="Root/Bottom/StrategyScroll/StratBox/StratGrid"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_type_variation = &"SmallButton"
+toggle_mode = true
+text = "HIT IT! HIT IT!"
+
+[node name="S1" type="Button" parent="Root/Bottom/StrategyScroll/StratBox/StratGrid"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_type_variation = &"SmallButton"
+toggle_mode = true
+text = "BEAT IT UP!"
+
+[node name="S2" type="Button" parent="Root/Bottom/StrategyScroll/StratBox/StratGrid"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_type_variation = &"SmallButton"
+toggle_mode = true
+text = "KEEP MOVING"
+
+[node name="S3" type="Button" parent="Root/Bottom/StrategyScroll/StratBox/StratGrid"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_type_variation = &"SmallButton"
+toggle_mode = true
+text = "KEEP YOUR BALANCE"
+
+[node name="CornerTitle" type="Label" parent="Root/Bottom/StrategyScroll/StratBox"]
+layout_mode = 2
+text = "CORNER ACTION - ONE ONLY, NO TAKING IT BACK"
+autowrap_mode = 3
+
+[node name="CornerGrid" type="GridContainer" parent="Root/Bottom/StrategyScroll/StratBox"]
+layout_mode = 2
+theme_override_constants/h_separation = 12
+columns = 4
+
+[node name="C0" type="Button" parent="Root/Bottom/StrategyScroll/StratBox/CornerGrid"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_type_variation = &"SmallButton"
+text = "BANDAGE"
+
+[node name="C1" type="Button" parent="Root/Bottom/StrategyScroll/StratBox/CornerGrid"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_type_variation = &"SmallButton"
+text = "BREATHE"
+
+[node name="C2" type="Button" parent="Root/Bottom/StrategyScroll/StratBox/CornerGrid"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_type_variation = &"SmallButton"
+text = "WATER"
+
+[node name="C3" type="Button" parent="Root/Bottom/StrategyScroll/StratBox/CornerGrid"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_type_variation = &"SmallButton"
+text = "ITEM"
+
+[node name="Notice" type="Label" parent="Root/Bottom/StrategyScroll/StratBox"]
+visible = false
+layout_mode = 2
+autowrap_mode = 3
+
+[node name="Go" type="Button" parent="Root/Bottom/StrategyScroll/StratBox"]
+layout_mode = 2
+disabled = true
+text = "ANSWER THE BELL"
+
+[node name="RoundBox" type="VBoxContainer" parent="Root/Bottom"]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 32.0
+offset_top = 12.0
+offset_right = -32.0
+offset_bottom = -12.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 14
+
+[node name="InfoRow" type="HBoxContainer" parent="Root/Bottom/RoundBox"]
+layout_mode = 2
+theme_override_constants/separation = 16
+
+[node name="TapInfo" type="Label" parent="Root/Bottom/RoundBox/InfoRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 1
+text = "ENCOURAGE  0 / 8"
+vertical_alignment = 1
+
+[node name="Speed" type="Button" parent="Root/Bottom/RoundBox/InfoRow"]
+layout_mode = 2
+theme_type_variation = &"SmallButton"
+text = "SPEED 2x"
+
+[node name="Tap" type="Button" parent="Root/Bottom/RoundBox"]
+layout_mode = 2
+size_flags_vertical = 3
+theme_type_variation = &"BigButton"
+text = "TAP! TAP! TAP!"
+
+[node name="EndBox" type="VBoxContainer" parent="Root/Bottom"]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 32.0
+offset_top = 12.0
+offset_right = -32.0
+offset_bottom = -12.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 20
+
+[node name="Summary" type="Label" parent="Root/Bottom/EndBox"]
+layout_mode = 2
+size_flags_vertical = 3
+text = "..."
+horizontal_alignment = 1
+vertical_alignment = 1
+autowrap_mode = 3
+
+[node name="Continue" type="Button" parent="Root/Bottom/EndBox"]
+layout_mode = 2
+theme_type_variation = &"BigButton"
+text = "CONTINUE"

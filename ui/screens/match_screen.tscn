@@ -1,0 +1,15 @@
+[gd_scene load_steps=2 format=3]
+
+; PATH ALIAS. `ui/router.gd` (owned by the Foundation agent, not editable here)
+; looks the match screen up at
+;   Router.SCENE_PATHS[Screen.MATCH] = "res://ui/screens/match_screen.tscn"
+; but this agent's file list names the screen `fight_screen.tscn`. This is an
+; inherited scene over the real one so the Router resolves it instead of falling
+; back to the placeholder. Everything lives in ui/screens/fight_screen.tscn —
+; if the Router path is ever changed to match, delete this file.
+;
+; Same convention as ui/screens/monkey_select_screen.tscn.
+
+[ext_resource type="PackedScene" path="res://ui/screens/fight_screen.tscn" id="1_fight_screen"]
+
+[node name="MatchScreen" instance=ExtResource("1_fight_screen")]

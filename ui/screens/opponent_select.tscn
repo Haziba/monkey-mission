@@ -1,0 +1,283 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://ui/screens/opponent_select.gd" id="1_opponent"]
+
+[node name="OpponentSelect" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_opponent")
+
+[node name="Bg" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="Root" type="VBoxContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 32.0
+offset_top = 40.0
+offset_right = -32.0
+offset_bottom = -40.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 24
+
+[node name="Header" type="HBoxContainer" parent="Root"]
+layout_mode = 2
+
+[node name="Rank" type="Label" parent="Root/Header"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "JSB RANK: 5"
+vertical_alignment = 1
+
+[node name="Money" type="Label" parent="Root/Header"]
+layout_mode = 2
+text = "¥1500"
+horizontal_alignment = 2
+vertical_alignment = 1
+
+[node name="Prompt" type="PanelContainer" parent="Root"]
+layout_mode = 2
+theme_type_variation = &"HudBox"
+
+[node name="Text" type="Label" parent="Root/Prompt"]
+layout_mode = 2
+theme_type_variation = &"InkLabel"
+text = "WHO DO YOU WANT TO FIGHT NEXT?"
+horizontal_alignment = 1
+vertical_alignment = 1
+autowrap_mode = 3
+
+[node name="Cards" type="VBoxContainer" parent="Root"]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_constants/separation = 20
+
+[node name="Card0" type="Button" parent="Root/Cards"]
+custom_minimum_size = Vector2(0, 300)
+layout_mode = 2
+size_flags_vertical = 3
+toggle_mode = true
+
+[node name="Body" type="MarginContainer" parent="Root/Cards/Card0"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_constants/margin_left = 26
+theme_override_constants/margin_top = 22
+theme_override_constants/margin_right = 26
+theme_override_constants/margin_bottom = 22
+
+[node name="Row" type="HBoxContainer" parent="Root/Cards/Card0/Body"]
+layout_mode = 2
+theme_override_constants/separation = 20
+
+[node name="Chip" type="ColorRect" parent="Root/Cards/Card0/Body/Row"]
+custom_minimum_size = Vector2(26, 0)
+layout_mode = 2
+
+[node name="Info" type="VBoxContainer" parent="Root/Cards/Card0/Body/Row"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 8
+
+[node name="Name" type="Label" parent="Root/Cards/Card0/Body/Row/Info"]
+layout_mode = 2
+theme_type_variation = &"InkLabel"
+text = "RANK 4   AGATHA(ML)"
+
+[node name="Trainer" type="Label" parent="Root/Cards/Card0/Body/Row/Info"]
+layout_mode = 2
+theme_type_variation = &"InkSmallLabel"
+text = "TRAINER: MS. HARA"
+
+[node name="Stats" type="Label" parent="Root/Cards/Card0/Body/Row/Info"]
+layout_mode = 2
+theme_type_variation = &"InkSmallLabel"
+text = "POW 0  SPD 0  KNOW 0  STRG 0  STM 0"
+autowrap_mode = 3
+
+[node name="Side" type="VBoxContainer" parent="Root/Cards/Card0/Body/Row"]
+custom_minimum_size = Vector2(280, 0)
+layout_mode = 2
+theme_override_constants/separation = 10
+alignment = 1
+
+[node name="Above" type="Label" parent="Root/Cards/Card0/Body/Row/Side"]
+layout_mode = 2
+theme_type_variation = &"InkSmallLabel"
+text = "RANKED ABOVE YOU"
+horizontal_alignment = 2
+autowrap_mode = 3
+
+[node name="Purse" type="Label" parent="Root/Cards/Card0/Body/Row/Side"]
+layout_mode = 2
+theme_type_variation = &"InkSmallLabel"
+text = "PURSE ¥0"
+horizontal_alignment = 2
+
+[node name="Card1" type="Button" parent="Root/Cards"]
+custom_minimum_size = Vector2(0, 300)
+layout_mode = 2
+size_flags_vertical = 3
+toggle_mode = true
+
+[node name="Body" type="MarginContainer" parent="Root/Cards/Card1"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_constants/margin_left = 26
+theme_override_constants/margin_top = 22
+theme_override_constants/margin_right = 26
+theme_override_constants/margin_bottom = 22
+
+[node name="Row" type="HBoxContainer" parent="Root/Cards/Card1/Body"]
+layout_mode = 2
+theme_override_constants/separation = 20
+
+[node name="Chip" type="ColorRect" parent="Root/Cards/Card1/Body/Row"]
+custom_minimum_size = Vector2(26, 0)
+layout_mode = 2
+
+[node name="Info" type="VBoxContainer" parent="Root/Cards/Card1/Body/Row"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 8
+
+[node name="Name" type="Label" parent="Root/Cards/Card1/Body/Row/Info"]
+layout_mode = 2
+theme_type_variation = &"InkLabel"
+text = "RANK 5   LEMON(FM)"
+
+[node name="Trainer" type="Label" parent="Root/Cards/Card1/Body/Row/Info"]
+layout_mode = 2
+theme_type_variation = &"InkSmallLabel"
+text = "TRAINER: MR. TANI"
+
+[node name="Stats" type="Label" parent="Root/Cards/Card1/Body/Row/Info"]
+layout_mode = 2
+theme_type_variation = &"InkSmallLabel"
+text = "POW 0  SPD 0  KNOW 0  STRG 0  STM 0"
+autowrap_mode = 3
+
+[node name="Side" type="VBoxContainer" parent="Root/Cards/Card1/Body/Row"]
+custom_minimum_size = Vector2(280, 0)
+layout_mode = 2
+theme_override_constants/separation = 10
+alignment = 1
+
+[node name="Above" type="Label" parent="Root/Cards/Card1/Body/Row/Side"]
+layout_mode = 2
+theme_type_variation = &"InkSmallLabel"
+text = "AT OR BELOW YOU"
+horizontal_alignment = 2
+autowrap_mode = 3
+
+[node name="Purse" type="Label" parent="Root/Cards/Card1/Body/Row/Side"]
+layout_mode = 2
+theme_type_variation = &"InkSmallLabel"
+text = "PURSE ¥0"
+horizontal_alignment = 2
+
+[node name="Card2" type="Button" parent="Root/Cards"]
+custom_minimum_size = Vector2(0, 300)
+layout_mode = 2
+size_flags_vertical = 3
+toggle_mode = true
+
+[node name="Body" type="MarginContainer" parent="Root/Cards/Card2"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_constants/margin_left = 26
+theme_override_constants/margin_top = 22
+theme_override_constants/margin_right = 26
+theme_override_constants/margin_bottom = 22
+
+[node name="Row" type="HBoxContainer" parent="Root/Cards/Card2/Body"]
+layout_mode = 2
+theme_override_constants/separation = 20
+
+[node name="Chip" type="ColorRect" parent="Root/Cards/Card2/Body/Row"]
+custom_minimum_size = Vector2(26, 0)
+layout_mode = 2
+
+[node name="Info" type="VBoxContainer" parent="Root/Cards/Card2/Body/Row"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 8
+
+[node name="Name" type="Label" parent="Root/Cards/Card2/Body/Row/Info"]
+layout_mode = 2
+theme_type_variation = &"InkLabel"
+text = "RANK 5   BETTY(FM)"
+
+[node name="Trainer" type="Label" parent="Root/Cards/Card2/Body/Row/Info"]
+layout_mode = 2
+theme_type_variation = &"InkSmallLabel"
+text = "TRAINER: MS. KUDO"
+
+[node name="Stats" type="Label" parent="Root/Cards/Card2/Body/Row/Info"]
+layout_mode = 2
+theme_type_variation = &"InkSmallLabel"
+text = "POW 0  SPD 0  KNOW 0  STRG 0  STM 0"
+autowrap_mode = 3
+
+[node name="Side" type="VBoxContainer" parent="Root/Cards/Card2/Body/Row"]
+custom_minimum_size = Vector2(280, 0)
+layout_mode = 2
+theme_override_constants/separation = 10
+alignment = 1
+
+[node name="Above" type="Label" parent="Root/Cards/Card2/Body/Row/Side"]
+layout_mode = 2
+theme_type_variation = &"InkSmallLabel"
+text = "AT OR BELOW YOU"
+horizontal_alignment = 2
+autowrap_mode = 3
+
+[node name="Purse" type="Label" parent="Root/Cards/Card2/Body/Row/Side"]
+layout_mode = 2
+theme_type_variation = &"InkSmallLabel"
+text = "PURSE ¥0"
+horizontal_alignment = 2
+
+[node name="Footer" type="HBoxContainer" parent="Root"]
+layout_mode = 2
+theme_override_constants/separation = 20
+
+[node name="Back" type="Button" parent="Root/Footer"]
+layout_mode = 2
+theme_type_variation = &"SmallButton"
+text = "BACK"
+
+[node name="Confirm" type="Button" parent="Root/Footer"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_type_variation = &"BigButton"
+disabled = true
+text = "BOOK THE FIGHT"

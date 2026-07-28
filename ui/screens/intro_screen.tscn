@@ -1,0 +1,183 @@
+[gd_scene load_steps=3 format=3]
+
+; Prologue screen: protagonist picker, then the data-driven intro dialogue.
+; Portrait 1080x1920. Every colour is applied from ui/theme/palette.gd in
+; intro_screen.gd — nothing here bakes a Color.
+
+[ext_resource type="Script" path="res://ui/screens/intro_screen.gd" id="1_intro"]
+[ext_resource type="PackedScene" path="res://ui/components/dialogue_box.tscn" id="2_dialogue"]
+
+[node name="IntroScreen" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_intro")
+
+[node name="Bg" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="Choose" type="Control" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="Margin" type="MarginContainer" parent="Choose"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_constants/margin_left = 40
+theme_override_constants/margin_top = 40
+theme_override_constants/margin_right = 40
+theme_override_constants/margin_bottom = 40
+
+[node name="Box" type="VBoxContainer" parent="Choose/Margin"]
+layout_mode = 2
+mouse_filter = 2
+alignment = 1
+theme_override_constants/separation = 32
+
+[node name="Title" type="Label" parent="Choose/Margin/Box"]
+layout_mode = 2
+mouse_filter = 2
+text = "MONKEY PUNCHER"
+horizontal_alignment = 1
+autowrap_mode = 3
+
+[node name="Sub" type="Label" parent="Choose/Margin/Box"]
+layout_mode = 2
+mouse_filter = 2
+text = "Which of you did they leave behind?"
+horizontal_alignment = 1
+autowrap_mode = 3
+
+[node name="KentaCard" type="Button" parent="Choose/Margin/Box"]
+custom_minimum_size = Vector2(0, 380)
+layout_mode = 2
+
+[node name="Body" type="MarginContainer" parent="Choose/Margin/Box/KentaCard"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_constants/margin_left = 40
+theme_override_constants/margin_top = 32
+theme_override_constants/margin_right = 40
+theme_override_constants/margin_bottom = 32
+
+[node name="Row" type="HBoxContainer" parent="Choose/Margin/Box/KentaCard/Body"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 32
+
+[node name="Swatch" type="ColorRect" parent="Choose/Margin/Box/KentaCard/Body/Row"]
+custom_minimum_size = Vector2(200, 200)
+layout_mode = 2
+size_flags_vertical = 4
+mouse_filter = 2
+
+[node name="Text" type="VBoxContainer" parent="Choose/Margin/Box/KentaCard/Body/Row"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 4
+mouse_filter = 2
+theme_override_constants/separation = 16
+
+[node name="Name" type="Label" parent="Choose/Margin/Box/KentaCard/Body/Row/Text"]
+layout_mode = 2
+mouse_filter = 2
+text = "KENTA"
+
+[node name="Blurb" type="Label" parent="Choose/Margin/Box/KentaCard/Body/Row/Text"]
+layout_mode = 2
+mouse_filter = 2
+text = ""
+autowrap_mode = 3
+
+[node name="SumireCard" type="Button" parent="Choose/Margin/Box"]
+custom_minimum_size = Vector2(0, 380)
+layout_mode = 2
+
+[node name="Body" type="MarginContainer" parent="Choose/Margin/Box/SumireCard"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_constants/margin_left = 40
+theme_override_constants/margin_top = 32
+theme_override_constants/margin_right = 40
+theme_override_constants/margin_bottom = 32
+
+[node name="Row" type="HBoxContainer" parent="Choose/Margin/Box/SumireCard/Body"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 32
+
+[node name="Swatch" type="ColorRect" parent="Choose/Margin/Box/SumireCard/Body/Row"]
+custom_minimum_size = Vector2(200, 200)
+layout_mode = 2
+size_flags_vertical = 4
+mouse_filter = 2
+
+[node name="Text" type="VBoxContainer" parent="Choose/Margin/Box/SumireCard/Body/Row"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 4
+mouse_filter = 2
+theme_override_constants/separation = 16
+
+[node name="Name" type="Label" parent="Choose/Margin/Box/SumireCard/Body/Row/Text"]
+layout_mode = 2
+mouse_filter = 2
+text = "SUMIRE"
+
+[node name="Blurb" type="Label" parent="Choose/Margin/Box/SumireCard/Body/Row/Text"]
+layout_mode = 2
+mouse_filter = 2
+text = ""
+autowrap_mode = 3
+
+[node name="Footnote" type="Label" parent="Choose/Margin/Box"]
+layout_mode = 2
+mouse_filter = 2
+text = ""
+horizontal_alignment = 1
+autowrap_mode = 3
+
+[node name="Dialogue" parent="." instance=ExtResource("2_dialogue")]
+layout_mode = 1
+visible = false
+
+[node name="Skip" type="Button" parent="."]
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -300.0
+offset_top = 40.0
+offset_right = -40.0
+offset_bottom = 172.0
+grow_horizontal = 0
+text = "SKIP  ▶"

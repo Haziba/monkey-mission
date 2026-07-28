@@ -1,0 +1,343 @@
+[gd_scene load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://ui/screens/home_screen.gd" id="1_home"]
+[ext_resource type="PackedScene" path="res://ui/components/hud_boxes.tscn" id="2_hud"]
+[ext_resource type="PackedScene" path="res://ui/components/stat_card.tscn" id="3_card"]
+
+[node name="HomeScreen" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_home")
+
+[node name="Bg" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="Root" type="MarginContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 40
+theme_override_constants/margin_top = 40
+theme_override_constants/margin_right = 40
+theme_override_constants/margin_bottom = 40
+
+[node name="Col" type="VBoxContainer" parent="Root"]
+layout_mode = 2
+theme_override_constants/separation = 24
+
+[node name="Hud" parent="Root/Col" instance=ExtResource("2_hud")]
+custom_minimum_size = Vector2(0, 104)
+layout_mode = 2
+
+[node name="Room" type="Control" parent="Root/Col"]
+custom_minimum_size = Vector2(0, 300)
+layout_mode = 2
+size_flags_vertical = 3
+mouse_filter = 2
+
+[node name="Wall" type="ColorRect" parent="Root/Col/Room"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="ShojiL" type="ColorRect" parent="Root/Col/Room"]
+layout_mode = 1
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -420.0
+offset_top = 30.0
+offset_right = -30.0
+offset_bottom = 250.0
+grow_horizontal = 2
+mouse_filter = 2
+
+[node name="ShojiR" type="ColorRect" parent="Root/Col/Room"]
+layout_mode = 1
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = 30.0
+offset_top = 30.0
+offset_right = 420.0
+offset_bottom = 250.0
+grow_horizontal = 2
+mouse_filter = 2
+
+[node name="ShojiFrame" type="ColorRect" parent="Root/Col/Room"]
+layout_mode = 1
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -16.0
+offset_top = 20.0
+offset_right = 16.0
+offset_bottom = 260.0
+grow_horizontal = 2
+mouse_filter = 2
+
+[node name="Floor" type="ColorRect" parent="Root/Col/Room"]
+layout_mode = 1
+anchors_preset = 12
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_top = -150.0
+grow_horizontal = 2
+grow_vertical = 0
+mouse_filter = 2
+
+[node name="FloorLine" type="ColorRect" parent="Root/Col/Room"]
+layout_mode = 1
+anchors_preset = 12
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_top = -150.0
+offset_bottom = -142.0
+grow_horizontal = 2
+grow_vertical = 0
+mouse_filter = 2
+
+[node name="TrainerRig" type="Control" parent="Root/Col/Room"]
+layout_mode = 1
+anchors_preset = 2
+anchor_top = 1.0
+anchor_bottom = 1.0
+offset_left = 130.0
+offset_top = -300.0
+offset_right = 260.0
+offset_bottom = -30.0
+grow_vertical = 0
+mouse_filter = 2
+
+[node name="Legs" type="ColorRect" parent="Root/Col/Room/TrainerRig"]
+layout_mode = 0
+offset_left = 30.0
+offset_top = 180.0
+offset_right = 100.0
+offset_bottom = 270.0
+mouse_filter = 2
+
+[node name="Body" type="ColorRect" parent="Root/Col/Room/TrainerRig"]
+layout_mode = 0
+offset_left = 20.0
+offset_top = 90.0
+offset_right = 110.0
+offset_bottom = 190.0
+mouse_filter = 2
+
+[node name="Head" type="ColorRect" parent="Root/Col/Room/TrainerRig"]
+layout_mode = 0
+offset_left = 30.0
+offset_top = 20.0
+offset_right = 100.0
+offset_bottom = 95.0
+mouse_filter = 2
+
+[node name="Hair" type="ColorRect" parent="Root/Col/Room/TrainerRig"]
+layout_mode = 0
+offset_left = 26.0
+offset_top = 6.0
+offset_right = 104.0
+offset_bottom = 36.0
+mouse_filter = 2
+
+[node name="MonkeyRig" type="Control" parent="Root/Col/Room"]
+layout_mode = 1
+anchors_preset = 2
+anchor_top = 1.0
+anchor_bottom = 1.0
+offset_left = 560.0
+offset_top = -250.0
+offset_right = 730.0
+offset_bottom = -30.0
+grow_vertical = 0
+mouse_filter = 2
+
+[node name="Tail" type="ColorRect" parent="Root/Col/Room/MonkeyRig"]
+layout_mode = 0
+offset_left = 2.0
+offset_top = 124.0
+offset_right = 46.0
+offset_bottom = 142.0
+mouse_filter = 2
+
+[node name="Body" type="ColorRect" parent="Root/Col/Room/MonkeyRig"]
+layout_mode = 0
+offset_left = 40.0
+offset_top = 110.0
+offset_right = 130.0
+offset_bottom = 210.0
+mouse_filter = 2
+
+[node name="Head" type="ColorRect" parent="Root/Col/Room/MonkeyRig"]
+layout_mode = 0
+offset_left = 47.0
+offset_top = 36.0
+offset_right = 123.0
+offset_bottom = 112.0
+mouse_filter = 2
+
+[node name="EarL" type="ColorRect" parent="Root/Col/Room/MonkeyRig"]
+layout_mode = 0
+offset_left = 27.0
+offset_top = 48.0
+offset_right = 51.0
+offset_bottom = 82.0
+mouse_filter = 2
+
+[node name="EarR" type="ColorRect" parent="Root/Col/Room/MonkeyRig"]
+layout_mode = 0
+offset_left = 119.0
+offset_top = 48.0
+offset_right = 143.0
+offset_bottom = 82.0
+mouse_filter = 2
+
+[node name="Face" type="ColorRect" parent="Root/Col/Room/MonkeyRig"]
+layout_mode = 0
+offset_left = 60.0
+offset_top = 58.0
+offset_right = 110.0
+offset_bottom = 104.0
+mouse_filter = 2
+
+[node name="EyeL" type="ColorRect" parent="Root/Col/Room/MonkeyRig"]
+layout_mode = 0
+offset_left = 68.0
+offset_top = 68.0
+offset_right = 80.0
+offset_bottom = 80.0
+mouse_filter = 2
+
+[node name="EyeR" type="ColorRect" parent="Root/Col/Room/MonkeyRig"]
+layout_mode = 0
+offset_left = 92.0
+offset_top = 68.0
+offset_right = 104.0
+offset_bottom = 80.0
+mouse_filter = 2
+
+[node name="Mood" type="Label" parent="Root/Col/Room/MonkeyRig"]
+layout_mode = 0
+offset_left = 120.0
+offset_top = -50.0
+offset_right = 240.0
+offset_bottom = 40.0
+mouse_filter = 2
+text = "♪"
+vertical_alignment = 1
+
+[node name="MessageBox" type="PanelContainer" parent="Root/Col"]
+custom_minimum_size = Vector2(0, 130)
+layout_mode = 2
+
+[node name="Text" type="Label" parent="Root/Col/MessageBox"]
+layout_mode = 2
+text = "WELCOME HOME."
+vertical_alignment = 1
+autowrap_mode = 3
+
+[node name="Card" parent="Root/Col" instance=ExtResource("3_card")]
+layout_mode = 2
+
+[node name="Menu" type="GridContainer" parent="Root/Col"]
+layout_mode = 2
+theme_override_constants/h_separation = 24
+theme_override_constants/v_separation = 20
+columns = 2
+
+[node name="Btn0" type="Button" parent="Root/Col/Menu"]
+custom_minimum_size = Vector2(0, 132)
+layout_mode = 2
+size_flags_horizontal = 3
+text = "SKIPPING"
+
+[node name="Btn1" type="Button" parent="Root/Col/Menu"]
+custom_minimum_size = Vector2(0, 132)
+layout_mode = 2
+size_flags_horizontal = 3
+text = "SIT-UPS"
+
+[node name="Btn2" type="Button" parent="Root/Col/Menu"]
+custom_minimum_size = Vector2(0, 132)
+layout_mode = 2
+size_flags_horizontal = 3
+text = "PUNCHBAG"
+
+[node name="Btn3" type="Button" parent="Root/Col/Menu"]
+custom_minimum_size = Vector2(0, 132)
+layout_mode = 2
+size_flags_horizontal = 3
+text = "RUNNING"
+
+[node name="Btn4" type="Button" parent="Root/Col/Menu"]
+custom_minimum_size = Vector2(0, 132)
+layout_mode = 2
+size_flags_horizontal = 3
+text = "SHOPPING"
+
+[node name="Btn5" type="Button" parent="Root/Col/Menu"]
+custom_minimum_size = Vector2(0, 132)
+layout_mode = 2
+size_flags_horizontal = 3
+text = "SPARRING"
+
+[node name="Btn6" type="Button" parent="Root/Col/Menu"]
+custom_minimum_size = Vector2(0, 132)
+layout_mode = 2
+size_flags_horizontal = 3
+text = "FEED"
+
+[node name="Btn7" type="Button" parent="Root/Col/Menu"]
+custom_minimum_size = Vector2(0, 132)
+layout_mode = 2
+size_flags_horizontal = 3
+text = "MATCH"
+
+; Added by the Integration agent. `ui/screens/breeding_screen.tscn` and
+; `ui/screens/roster_screen.tscn` both shipped, but nothing in the game pushed
+; either of them — breeding, the game's signature system, was unreachable.
+
+[node name="Btn8" type="Button" parent="Root/Col/Menu"]
+custom_minimum_size = Vector2(0, 132)
+layout_mode = 2
+size_flags_horizontal = 3
+text = "DATING SHOP"
+
+[node name="Btn9" type="Button" parent="Root/Col/Menu"]
+custom_minimum_size = Vector2(0, 132)
+layout_mode = 2
+size_flags_horizontal = 3
+text = "ROSTER"
+
+; Added by the Verification agent. Dossier §5 [C]: BOTH hunger extremes
+; immobilise the monkey. Every other slot-consuming entry above is gated on the
+; monkey being able to act, so a stuffed or starving monkey could not move the
+; clock at all — it never digested, and Economy.check_bailout() (which only runs
+; at the top of a day) could never fire. REST spends the half-day and nothing
+; else, which is the cost of overfeeding rather than an escape from it.
+
+[node name="Btn10" type="Button" parent="Root/Col/Menu"]
+custom_minimum_size = Vector2(0, 132)
+layout_mode = 2
+size_flags_horizontal = 3
+text = "REST"

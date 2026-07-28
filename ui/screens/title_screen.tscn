@@ -1,0 +1,169 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://ui/screens/title_screen.gd" id="1_title"]
+
+[node name="TitleScreen" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_title")
+
+[node name="WordmarkTop" type="Label" parent="."]
+layout_mode = 1
+anchor_right = 1.0
+grow_horizontal = 2
+mouse_filter = 2
+text = "MONKEY"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="WordmarkBottom" type="Label" parent="."]
+layout_mode = 1
+anchor_right = 1.0
+grow_horizontal = 2
+mouse_filter = 2
+text = "PUNCHER"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="Subtitle" type="Label" parent="."]
+layout_mode = 1
+anchor_top = 0.365
+anchor_right = 1.0
+anchor_bottom = 0.4
+offset_left = 60.0
+offset_right = -60.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_type_variation = &"InkSmallLabel"
+text = "MK2 · A PLACEHOLDER-ART REMAKE"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="Menu" type="VBoxContainer" parent="."]
+layout_mode = 1
+anchor_top = 0.47
+anchor_right = 1.0
+anchor_bottom = 0.86
+offset_left = 80.0
+offset_right = -80.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 28
+
+[node name="NewGame" type="Button" parent="Menu"]
+layout_mode = 2
+focus_neighbor_top = NodePath("../Settings")
+theme_type_variation = &"BigButton"
+text = "NEW GAME"
+
+[node name="Continue" type="Button" parent="Menu"]
+layout_mode = 2
+disabled = true
+theme_type_variation = &"BigButton"
+text = "CONTINUE"
+
+[node name="SaveInfo" type="Label" parent="Menu"]
+layout_mode = 2
+mouse_filter = 2
+theme_type_variation = &"InkSmallLabel"
+text = "NO SAVED GAME"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="Settings" type="Button" parent="Menu"]
+layout_mode = 2
+focus_neighbor_bottom = NodePath("../NewGame")
+theme_type_variation = &"SmallButton"
+text = "SETTINGS"
+
+[node name="Status" type="Label" parent="Menu"]
+visible = false
+layout_mode = 2
+mouse_filter = 2
+theme_type_variation = &"InkSmallLabel"
+autowrap_mode = 3
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="Footer" type="Label" parent="."]
+layout_mode = 1
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 60.0
+offset_top = -104.0
+offset_right = -60.0
+offset_bottom = -24.0
+grow_horizontal = 2
+grow_vertical = 0
+mouse_filter = 2
+theme_type_variation = &"InkSmallLabel"
+text = "FAN REMAKE OF MONKEY PUNCHER\nORIGINAL BY ATELIER DOUBLE / TAITO, 2000"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="Confirm" type="Control" parent="."]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Dim" type="ColorRect" parent="Confirm"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Box" type="PanelContainer" parent="Confirm"]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -460.0
+offset_top = -280.0
+offset_right = 460.0
+offset_bottom = 280.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Rows" type="VBoxContainer" parent="Confirm/Box"]
+layout_mode = 2
+theme_override_constants/separation = 32
+
+[node name="Message" type="Label" parent="Confirm/Box/Rows"]
+layout_mode = 2
+size_flags_vertical = 3
+mouse_filter = 2
+autowrap_mode = 3
+text = "A SAVED GAME ALREADY EXISTS.
+STARTING A NEW ONE OVERWRITES IT."
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="Buttons" type="HBoxContainer" parent="Confirm/Box/Rows"]
+layout_mode = 2
+theme_override_constants/separation = 24
+
+[node name="Cancel" type="Button" parent="Confirm/Box/Rows/Buttons"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_type_variation = &"SmallButton"
+text = "KEEP IT"
+
+[node name="Overwrite" type="Button" parent="Confirm/Box/Rows/Buttons"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_type_variation = &"BigButton"
+text = "OVERWRITE"

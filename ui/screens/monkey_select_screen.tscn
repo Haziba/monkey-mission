@@ -1,0 +1,13 @@
+[gd_scene load_steps=2 format=3]
+
+; PATH ALIAS. `ui/router.gd` (owned by the Foundation agent, not editable here)
+; looks the monkey-select screen up at
+;   Router.SCENE_PATHS[Screen.MONKEY_SELECT] = "res://ui/screens/monkey_select_screen.tscn"
+; but this agent's file list names the screen `monkey_select.tscn`. This is an
+; inherited scene over the real one so the Router resolves it instead of falling
+; back to the placeholder. Everything lives in ui/screens/monkey_select.tscn —
+; if the Router path is ever changed to match, delete this file.
+
+[ext_resource type="PackedScene" path="res://ui/screens/monkey_select.tscn" id="1_monkey_select"]
+
+[node name="MonkeySelect" instance=ExtResource("1_monkey_select")]
