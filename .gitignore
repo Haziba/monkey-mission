@@ -1,0 +1,31 @@
+# Godot 4 ------------------------------------------------------------------
+.godot/
+/android/
+*.translation
+
+# Exports (this project deliberately ships no export presets) -------------
+export_presets.cfg
+/build/
+/exports/
+*.apk
+*.aab
+*.ipa
+*.pck
+*.zip
+
+# Godot mono / C# (unused — GDScript only) --------------------------------
+.mono/
+data_*/
+mono_crash.*.json
+
+# macOS -------------------------------------------------------------------
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# Editors -----------------------------------------------------------------
+*.swp
+*~
+.idea/
+.vscode/
