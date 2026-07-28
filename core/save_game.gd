@@ -18,6 +18,10 @@ extends RefCounted
 ## They return null / {"exists": false} instead.
 
 const SAVE_PATH := "user://monkey_puncher_mk2.save"
+## Scratch file for the write-then-rename dance in `save()`. Never read from,
+## and safe to find lying around: a leftover one only means a previous write was
+## killed partway, and the next save overwrites it.
+const TEMP_PATH := "user://monkey_puncher_mk2.save.tmp"
 const SAVE_VERSION := 1
 
 
@@ -32,12 +36,46 @@ static func save(state: RunState) -> bool:
 	var data := serialise(state)
 	if data.is_empty():
 		return false
-	var file := FileAccess.open(SAVE_PATH, FileAccess.WRITE)
+	# Write to a scratch file and rename it over the real one, rather than opening
+	# SAVE_PATH directly.
+	#
+	# Opening for WRITE truncates immediately, so the old save is destroyed before
+	# the new bytes land. Lose power, get force-quit, or — the realistic one on a
+	# phone — get killed by the OS while backgrounded, and the window between
+	# truncate and write leaves a half-written file. The player does not lose the
+	# last few minutes, they lose the whole run.
+	#
+	# Rename is atomic on every platform we target, so SAVE_PATH only ever holds
+	# a complete file: either the previous save or the new one, never a mixture.
+	var file := FileAccess.open(TEMP_PATH, FileAccess.WRITE)
 	if file == null:
-		push_error("SaveGame.save could not open %s (error %d)" % [SAVE_PATH, FileAccess.get_open_error()])
+		push_error("SaveGame.save could not open %s (error %d)" % [
+			TEMP_PATH, FileAccess.get_open_error()])
 		return false
 	file.store_string(JSON.stringify(data))
+	# Push the bytes out before the rename — a rename that beats its own contents
+	# to disk would defeat the point of doing this at all.
+	file.flush()
 	file.close()
+
+	# Globalised, matching `delete_save()` — DirAccess's absolute helpers want a
+	# real filesystem path, not a `user://` one.
+	var temp_absolute := ProjectSettings.globalize_path(TEMP_PATH)
+	var save_absolute := ProjectSettings.globalize_path(SAVE_PATH)
+	var renamed := DirAccess.rename_absolute(temp_absolute, save_absolute)
+	if renamed != OK:
+		# Some filesystems refuse to rename onto an existing file. Removing the
+		# target first reopens the very window this method exists to close, so it
+		# is a fallback rather than the normal path.
+		if FileAccess.file_exists(SAVE_PATH):
+			DirAccess.remove_absolute(save_absolute)
+			renamed = DirAccess.rename_absolute(temp_absolute, save_absolute)
+	if renamed != OK:
+		push_error("SaveGame.save could not move %s onto %s (error %d)" % [
+			TEMP_PATH, SAVE_PATH, renamed])
+		# Leave the scratch file: it holds a complete save, and a human can
+		# recover it. The next successful save overwrites it.
+		return false
 	return true
 
 
@@ -59,6 +97,10 @@ static func load_run() -> RunState:
 
 
 static func delete_save() -> bool:
+	# Clear the scratch file too, or a killed write leaves one behind that
+	# outlives the save it was meant to become.
+	if FileAccess.file_exists(TEMP_PATH):
+		DirAccess.remove_absolute(ProjectSettings.globalize_path(TEMP_PATH))
 	if not has_save():
 		return false
 	var absolute := ProjectSettings.globalize_path(SAVE_PATH)

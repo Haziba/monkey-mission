@@ -353,3 +353,80 @@ func _diff(actual: Variant, expected: Variant, path: String) -> String:
 	if actual == expected:
 		return ""
 	return "%s: expected %s, got %s" % [path, str(expected), str(actual)]
+
+
+# --- atomic write ----------------------------------------------------------
+#
+# `save()` writes to a scratch file and renames it over the real one. Opening
+# the save directly for WRITE truncates it before the new bytes land, so a
+# process killed in that window — the realistic case being the OS reaping a
+# backgrounded app on a phone — leaves a half-written file and the player loses
+# the entire run rather than the last few minutes.
+
+func test_saving_leaves_no_scratch_file_behind() -> void:
+	assert_true(SaveGame.save(_make_run()), "the save should succeed")
+	assert_true(SaveGame.has_save(), "the real save file should exist")
+	assert_false(FileAccess.file_exists(SaveGame.TEMP_PATH),
+		"the scratch file should have been renamed away, not left lying around")
+
+
+func test_the_previous_save_survives_until_the_new_one_is_complete() -> void:
+	# The property that matters: at no point does SAVE_PATH hold a partial file.
+	# Directly observing the mid-write instant is not possible in-process, so this
+	# asserts the mechanism instead — the bytes are built somewhere else first,
+	# and the scratch path is never the path the game reads from.
+	assert_ne(SaveGame.TEMP_PATH, SaveGame.SAVE_PATH,
+		"the scratch file must not be the file the game loads")
+	var first := _make_run()
+	first.economy.earn(4321)
+	assert_true(SaveGame.save(first))
+	var before := FileAccess.get_file_as_string(SaveGame.SAVE_PATH)
+	assert_true(before.length() > 0, "the first save should have written something")
+
+	var second := _make_run()
+	second.economy.earn(8765)
+	assert_true(SaveGame.save(second))
+	var after := FileAccess.get_file_as_string(SaveGame.SAVE_PATH)
+	assert_ne(after, before, "the second save should have replaced the first")
+	var reloaded := SaveGame.load_run()
+	assert_not_null(reloaded, "and the replacement must be a complete, loadable file")
+
+
+func test_a_leftover_scratch_file_does_not_break_the_next_save() -> void:
+	# What a killed write leaves behind. The next save must overwrite it rather
+	# than refuse, and the loaded run must be the new one.
+	var junk := FileAccess.open(SaveGame.TEMP_PATH, FileAccess.WRITE)
+	assert_not_null(junk, "could not stage a leftover scratch file")
+	if junk != null:
+		junk.store_string("{ this is half a save")
+		junk.close()
+
+	var run := _make_run()
+	run.economy.earn(999)
+	assert_true(SaveGame.save(run), "a leftover scratch file should not block a save")
+	assert_false(FileAccess.file_exists(SaveGame.TEMP_PATH),
+		"the leftover should have been consumed by the rename")
+	var reloaded := SaveGame.load_run()
+	assert_not_null(reloaded, "the save written over a leftover should load")
+
+
+func test_a_leftover_scratch_file_is_never_mistaken_for_a_save() -> void:
+	var junk := FileAccess.open(SaveGame.TEMP_PATH, FileAccess.WRITE)
+	if junk != null:
+		junk.store_string("{ this is half a save")
+		junk.close()
+	assert_false(SaveGame.has_save(),
+		"a scratch file alone is not a save — CONTINUE must stay unavailable")
+	assert_null(SaveGame.load_run(), "and there is nothing to load")
+
+
+func test_deleting_a_save_clears_the_scratch_file_too() -> void:
+	assert_true(SaveGame.save(_make_run()))
+	var junk := FileAccess.open(SaveGame.TEMP_PATH, FileAccess.WRITE)
+	if junk != null:
+		junk.store_string("leftover")
+		junk.close()
+	SaveGame.delete_save()
+	assert_false(FileAccess.file_exists(SaveGame.TEMP_PATH),
+		"a leftover scratch file should not outlive the save it belonged to")
+	assert_false(SaveGame.has_save())
