@@ -115,8 +115,8 @@ func _rebuild_run_for(protagonist: int) -> void:
 			and int(GameState.run.protagonist) == protagonist:
 		return
 	GameState.new_run(protagonist)
-	if GameState.has_run():
-		GameState.save_run()
+	# Not saved here — see title_screen. Nothing is committed to disk until the
+	# run reaches a day boundary, a match result or a breeding.
 
 
 func _begin_dialogue(protagonist: int) -> void:

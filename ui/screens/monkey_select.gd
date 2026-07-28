@@ -244,7 +244,8 @@ func _on_confirm_pressed() -> void:
 	# included, must be won over with food before it will train. Leaving the
 	# phase on INTRO would also send the title screen's CONTINUE back here.
 	GameState.set_phase(RunState.Phase.BEFRIEND)
-	GameState.save_run()
+	# Not saved here — see title_screen. Picking a monkey is not yet a run worth
+	# overwriting the previous one for.
 	Router.reset_to(Router.Screen.HOME)
 
 

@@ -294,7 +294,10 @@ func _start_new_run() -> void:
 		push_error("TitleScreen: GameState.new_run left `run` null (RunState.new_run stubbed?)")
 		_fail("COULD NOT START A NEW RUN.")
 		return
-	GameState.save_run()
+	# Deliberately NOT saved here. Writing on NEW GAME overwrote an existing run
+	# before the player had taken a single action, so a mistaken tap destroyed it
+	# with no confirmation. The run is committed at the first real milestone: a
+	# day boundary, a finished match, or a breeding.
 	Router.reset_to(Router.Screen.INTRO, {
 		"new_game": true,
 		"protagonist": int(DEFAULT_PROTAGONIST),

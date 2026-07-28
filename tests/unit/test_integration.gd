@@ -10,10 +10,11 @@ extends TestCase
 ## a match settles up into both the Economy and the Ladder, that breeding swaps
 ## the active monkey and files the parent, and that all of it survives a save.
 ##
-## `GameState` is an autoload in the running game, but autoloads are NOT
-## instantiated under `godot --headless --script` (verified), so each test builds
-## its own instance of the same script. It is a plain Node that never touches the
-## scene tree, which is exactly why that works — and is itself worth pinning.
+## `GameState` IS instantiated as an autoload under `godot --headless --script`
+## — an earlier version of this comment claimed otherwise and was wrong. Each
+## test still builds its own instance of the same script, so one test's run can
+## never leak into another's. It is a plain Node that never touches the scene
+## tree, which is exactly why that works — and is itself worth pinning.
 
 const GameStateScript := preload("res://core/game_state.gd")
 
@@ -1015,3 +1016,75 @@ func test_breeding_sends_the_new_generation_back_to_the_bottom() -> void:
 	assert_null(gs.run.booked_opponent,
 		"a fight booked for the retired parent must not carry over")
 	assert_eq(gs.run.phase, RunState.Phase.LADDER)
+
+
+# --- when the game commits to disk -------------------------------------------
+#
+# The run is saved at three points and nowhere else: a day boundary, a settled
+# match, and a birth. Screens used to call `save_run()` directly on NEW GAME, on
+# leaving the intro and on picking a monkey. The first of those was destructive —
+# tapping NEW GAME overwrote an existing run before the player had taken a single
+# action, with no confirmation and no way back.
+
+func test_starting_a_run_does_not_touch_an_existing_save() -> void:
+	_start()
+	_befriend()
+	_play_a_day()
+	var saved := SaveGame.load_run()
+	assert_not_null(saved, "a played day should have been committed")
+	var banked: int = saved.economy.money if saved != null else -1
+
+	# A second run begins — as it would when someone taps NEW GAME.
+	var other: Node = GameStateScript.new()
+	other.new_run(int(RunState.Protagonist.SUMIRE), SEED + 1)
+	var still_there := SaveGame.load_run()
+	other.free()
+
+	assert_not_null(still_there, "starting a new run must not delete the old save")
+	if still_there != null:
+		assert_eq(still_there.economy.money, banked,
+			"the save on disk should still be the first run, untouched")
+		assert_eq(int(still_there.protagonist), int(RunState.Protagonist.KENTA),
+			"the save should still belong to the run that actually earned it")
+
+
+func test_a_fresh_run_is_not_on_disk_before_it_reaches_a_milestone() -> void:
+	# Nothing has happened yet, so there is nothing worth resuming — and
+	# crucially nothing has been overwritten.
+	_start()
+	_befriend()
+	assert_false(SaveGame.has_save(),
+		"a run that has not finished a day, a match or a breeding is not committed")
+
+
+func test_finishing_a_day_commits_the_run() -> void:
+	_start()
+	_befriend()
+	assert_false(SaveGame.has_save())
+	_play_a_day()
+	assert_true(SaveGame.has_save(), "a day boundary is a commit point")
+
+
+func test_settling_a_match_commits_the_run() -> void:
+	_start()
+	_befriend()
+	_play_a_day()
+	SaveGame.delete_save()
+	_settle(MatchResolver.Outcome.WIN_KO, 4)
+	assert_true(SaveGame.has_save(), "a settled match is a commit point")
+
+
+func test_breeding_commits_the_run() -> void:
+	_start()
+	_befriend()
+	_play_a_day()
+	_max_out(gs.monkey())
+	# The dating shop charges a fee that scales with the partner's ceilings, and
+	# a run this early cannot cover the good ones.
+	gs.run.economy.earn(500000)
+	SaveGame.delete_save()
+	var result: Breeding.BreedResult = gs.breed_with(0, "Nipper")
+	assert_not_null(result, "the breeding should have gone through")
+	if result != null:
+		assert_not_null(result.baby, "the breeding should have produced a baby")
+	assert_true(SaveGame.has_save(), "a birth is a commit point")
