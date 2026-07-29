@@ -334,3 +334,60 @@ func test_apply_dict_is_silent_so_a_restore_does_not_spam_the_ui() -> void:
 	economy.apply_dict({"money": 42, "inventory": {"banana": 1}})
 	assert_eq(money_events.size(), 0)
 	assert_eq(inventory_events.size(), 0)
+
+
+# --- the Monkey Mission repoint: scrap IS money -------------------------------
+#
+# MISSION-ARCHITECTURE.md §11. `scrap` is an ALIAS over the same integer, not a
+# second balance, so the danger being tested for is drift: any way in which
+# writing one and reading the other could disagree.
+
+
+func test_scrap_and_money_are_one_balance_read_two_ways() -> void:
+	assert_eq(economy.scrap, economy.money,
+		"scrap must open equal to money — they are the same purse under two names")
+	economy.money = 1234
+	assert_eq(economy.scrap, 1234, "writing money must be visible through scrap")
+	economy.scrap = 99
+	assert_eq(economy.money, 99, "writing scrap must be visible through money")
+	assert_eq(economy.scrap, economy.money, "the two names can never hold different figures")
+
+
+func test_the_scrap_verbs_forward_onto_the_money_verbs() -> void:
+	# Forwarding rather than reimplementing is the whole point: if `spend_scrap`
+	# grew its own logic it could accept a purchase `spend` would refuse.
+	economy.money = 100
+	assert_true(economy.can_afford_scrap(100), "can_afford_scrap must agree with can_afford")
+	assert_false(economy.can_afford_scrap(101), "can_afford_scrap must refuse what money cannot cover")
+
+	assert_true(economy.spend_scrap(40), "spend_scrap must succeed when the scrap is there")
+	assert_eq(economy.money, 60, "spend_scrap must move the one shared balance")
+
+	assert_false(economy.spend_scrap(1000), "spend_scrap must refuse an unaffordable amount")
+	assert_eq(economy.money, 60, "a refused spend_scrap must change nothing at all")
+
+	economy.earn_scrap(15)
+	assert_eq(economy.scrap, 75, "earn_scrap must credit the shared balance")
+
+
+func test_spending_scrap_reports_through_the_money_signal() -> void:
+	# Voyage code will speak scrap while the existing UI still listens for
+	# money_changed. If the alias bypassed the signal, the purse would silently
+	# desync from every screen showing it.
+	economy.money = 500
+	money_events = []
+	economy.earn_scrap(50)
+	assert_eq(money_events.size(), 1, "earn_scrap must emit money_changed")
+	assert_eq(money_events[0], 550, "and report the new balance")
+	economy.spend_scrap(200)
+	assert_eq(money_events.size(), 2, "spend_scrap must emit money_changed too")
+	assert_eq(money_events[1], 350, "and report the new balance")
+
+
+func test_scrap_survives_a_serialisation_round_trip() -> void:
+	# There is deliberately no "scrap" key in the save: one balance, one key.
+	economy.scrap = 777
+	var restored := Economy.new(rules)
+	restored.apply_dict(economy.to_dict())
+	assert_eq(restored.scrap, 777, "scrap must round-trip through the money key")
+	assert_eq(restored.money, restored.scrap, "and still be the same integer afterwards")

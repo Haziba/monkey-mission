@@ -88,6 +88,23 @@ signal destitute_warning()
 signal relief_granted(parcel: Dictionary)
 
 var money: int = STARTING_MONEY
+
+## Monkey Mission's name for the same purse (design §5, MISSION-ARCHITECTURE §11).
+##
+## An ALIAS, deliberately, not a rename. `Ladder`, `Breeding`, `Training.go_shopping`,
+## the boxing screens and ~336 lines of green tests all say `money`, and renaming
+## the field would break every one of them at once for no behavioural gain. This
+## way voyage code can speak the fusion's vocabulary while the mutation is still
+## in flight, and the eventual rename is a mechanical sweep with nothing riding
+## on it.
+##
+## Reads and writes the SAME integer — there is no second balance to drift.
+var scrap: int:
+	get:
+		return money
+	set(value):
+		money = value
+
 ## food id -> count. Zero-count entries must be removed, not kept.
 var inventory: Dictionary = {}
 ## Sellable junk id -> count. Dossier §9 lists the junk table; the slice only
@@ -125,6 +142,24 @@ func earn(amount: int) -> void:
 		return
 	money += amount
 	money_changed.emit(money)
+
+
+# --- the voyage vocabulary ---------------------------------------------------
+#
+# Straight forwards onto the three above, so scrap can never behave differently
+# from money by accident. Present so that voyage and combat code never has to say
+# "money", which is the word this game no longer uses.
+
+func earn_scrap(amount: int) -> void:
+	earn(amount)
+
+
+func spend_scrap(amount: int) -> bool:
+	return spend(amount)
+
+
+func can_afford_scrap(amount: int) -> bool:
+	return can_afford(amount)
 
 
 func buy_food(food: Food, qty: int = 1) -> bool:
