@@ -73,11 +73,26 @@ const REACTOR_MAX := 16
 ## below a clean 0..1 fraction to work with.
 const SYSTEM_BARS_MAX := 4
 
-## DIVERGENCE: design §9 #4 — fuel pacing is [X]. 16 jumps of fuel against a
-## sector graph of 14..20 beacons (SectorMap.MIN_BEACONS/MAX_BEACONS) means a
+## DIVERGENCE: design §9 #4 — fuel pacing is [X].
+##
+## KNOWN GAP, do not trust the number. This was chosen on the reasoning that "a
 ## player who wanders greedily will run dry before the boss, while a direct line
-## through a sector always makes it. Fuel is therefore a real budget without
-## being a leash.
+## always makes it". That reasoning is FALSE as the map currently generates: every
+## link in a `SectorMap` advances exactly one column, so EVERY route from entry to
+## boss is exactly `SectorMap.COLUMNS - 1` = 5 jumps. There is no such thing as a
+## greedy detour, route choice costs no fuel whatsoever, and
+## `Voyage.EndReason.STRANDED` is unreachable by play — 3 sectors x 5 jumps is 15
+## against 16 starting fuel, before either `Voyage.SECTOR_CLEAR_FUEL` payout.
+##
+## Lowering this number does NOT fix it: with consumption fixed at 5 per sector,
+## fuel can only ever be a pass/fail threshold, never a decision. The fix is
+## route-length VARIATION — lateral links within a column, so a diversion to a
+## store costs a jump and lets the threat close. That is the top item in
+## docs/MORNING-REPORT.md §9 and it is deliberately not being done unattended,
+## because it changes an invariant that ~80 tests assert.
+##
+## Left at 16 meanwhile because it is safely slack: the voyage is completable and
+## nothing softlocks. Fuel is currently decorative, and honestly labelled as such.
 const FUEL_START := 16
 const MISSILES_START := 8
 

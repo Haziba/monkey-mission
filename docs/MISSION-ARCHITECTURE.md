@@ -343,6 +343,33 @@ uses. A member is unavailable when **any** of:
 An unavailable member keeps its assignment. The station simply reads as unmanned until it recovers,
 which is the correct texture: you can see who *should* be there.
 
+**Befriending gates crew work too.** `Care.can_act` requires `is_befriended()` as well as
+"not paralysed", and that is deliberate rather than an accident of reuse: dossier §5 `[C]` says
+befriending gates *everything*, and a monkey that does not trust you is no more use at a console
+than it was at a punchbag. A freshly recruited monkey at friendship 0 therefore mans nothing until
+it has been fed. The first draft's four-bullet list omitted this; it is a fifth bullet, not an
+exception.
+
+**Which queries follow the assignment, and which follow reality:**
+
+| Query | Follows |
+|---|---|
+| `manning`, `is_manned`, `unmanned_stations`, `floaters` | the **assignment** — who is posted there, available or not |
+| `effective_manning`, `station_performance` | **reality** — null / 0.0 when the holder cannot work |
+
+So a paralysed monkey's station is `is_manned() == true` and `station_performance() == 0.0`
+simultaneously. That is not a contradiction: the first is the crew sheet, the second is the ship's
+actual output, and the UI wants both — "PIZZA IS AT SHIELDS BUT CANNOT MOVE" needs the pair.
+
+**Two more rulings** that the first draft left open:
+
+* `award_station_xp(station, amount)` on an unmanned or unavailable station **returns 0** and banks
+  nothing. Nobody worked, so nobody learned.
+* A monkey whose keyed stat is below `STAT_PER_LEVEL` has a **ceiling of 0** and cannot use a station
+  level at all. It still accrues raw XP, because `Member.station_xp` is stored **uncapped** — so
+  training that stat later releases the level it has already earned rather than making it start
+  again. That is the two axes meeting, and it is the moment the fusion should feel deliberate.
+
 > **DIVERGENCE — `current_strength <= 0` incapacitates, it does not kill.** Nothing in the dossier
 > or the design doc says a monkey dies at zero Strength, and in boxing zero Strength is a KO — the
 > monkey gets up afterwards. Death is therefore an explicit `kill()` call reserved for lethal
@@ -409,13 +436,15 @@ func _init() -> void
 static func make_starter() -> Ship
 
 # --- power ---
-func allocate(station: int, bars: int) -> bool        ## false when short or damaged
-func deallocate(station: int, bars: int) -> void
+func allocate(station: int, bars: int) -> bool        ## false when the RESERVE is short
+func deallocate(station: int, bars: int) -> void      ## clamps at 0, never underflows
+func set_power(station: int, bars: int) -> bool       ## true only if `bars` was reached exactly
 func power_in(station: int) -> int                    ## bars requested
 func effective_power(station: int) -> int             ## bars actually working
-func power_used() -> int
-func power_free() -> int
+func power_used() -> int                              ## sum of REQUESTS across all stations
+func power_free() -> int                              ## reactor - power_used(), never negative
 func max_bars(station: int) -> int
+func is_offline(station: int) -> bool                 ## effective_power(station) == 0
 
 # --- damage ---
 func take_hull_damage(amount: int) -> int
@@ -449,6 +478,19 @@ func jump_charge_rate(engines_perf: float) -> float
 func to_dict() -> Dictionary
 func apply_dict(d: Dictionary) -> void
 ```
+
+### Semantics the first draft left open
+
+Every one of these was raised by the agent writing `test_ship.gd`, which correctly declined to test
+an unstated rule rather than guess. Stated now:
+
+| Question | Answer |
+|---|---|
+| What does a bare `Ship.new()` start with? | Full hull (`HULL_MAX`), `REACTOR_START` reactor, `FUEL_START` fuel, `MISSILES_START` missiles, and **zero power allocated**. `make_starter()` is what spends the reactor. |
+| What do `take_hull_damage` / `damage_system` / `repair_system` / `repair_hull` return? | The amount **actually applied** after clamping — never the resulting total. A caller can therefore tell overkill from effect. |
+| Does `allocate` refuse a damaged system? | **No.** The first draft said "false when short or damaged", which contradicted "the request survives, the capability does not". Damage never constrains the request; only the reactor and `SYSTEM_BARS_MAX` do. |
+| Is an unpowered but undamaged system `is_offline`? | **Yes.** `is_offline` means "delivering nothing", whatever the cause. |
+| Does `power_used()` sum requests or working bars? | **Requests.** This is what makes `power_used() + power_free() == reactor` hold, and it is why being shot is not a free reroute. |
 
 **The damage model, stated precisely** — the original wording here ("a knocked-out bar costs you
 output immediately") was ambiguous enough that a test was written against the wrong reading:
@@ -867,7 +909,111 @@ Mirrors design §9. Each row names the file where the DIVERGENCE comment lives.
 
 ---
 
-## 14. Guardrails, restated because this is the moment they get dropped
+## 14. Amendments recorded during implementation
+
+Mirrors `ARCHITECTURE.md` §20. **Nothing below removes or renumbers anything.** Every entry is an
+addition made while implementing phases 2–4, recorded here because §0 says a signature change must
+be written down rather than discovered.
+
+### `core/ship.gd`
+
+```gdscript
+func set_power(station: int, bars: int) -> bool   # set outright; true only if `bars` reached exactly
+func damage_in(station: int) -> int
+func has_fire(station: int) -> bool
+func has_breach(station: int) -> bool
+func add_missiles(amount: int) -> void
+static func from_dict(d: Dictionary) -> Ship
+```
+
+### `core/crew.gd`
+
+```gdscript
+func level_of(member: Member, station: int) -> int      # the ceiling-capped level in force
+func names() -> PackedStringArray
+static func level_for_xp(xp: float) -> int              # shared with Member
+static func ceiling_for_stat(stat_value: int) -> int
+static func xp_for_level(level: int) -> int
+# Member gained:
+func earned_level_in(station: int) -> int   # what XP alone bought, ignoring the ceiling
+func ceiling_in(station: int) -> int
+func display_name() -> String
+```
+
+`Member.earned_level_in` exists so the UI can say "held back by training" honestly, rather than the
+player seeing a level silently refuse to rise.
+
+### `core/sector_map.gd`
+
+```gdscript
+func reachable_from(from_index: int) -> Array[int]
+func all_reachable_from_entry() -> bool     # invariant 3 as one shared definition
+func mark_visited(index: int) -> void       # reveals forward links only, not the whole chart
+func count_of_kind(kind: NodeKind) -> int
+func beacons_in_column(column: int) -> Array[int]
+func last_column() -> int
+static func kind_label(kind: NodeKind) -> String
+```
+
+### `core/voyage.gd`
+
+```gdscript
+var boss_cleared: bool          # arriving at the boss is not beating it
+var jumps_this_sector: int      # the threat's grace is per SECTOR, not per voyage
+func clear_boss() -> void
+func settle(ship: Ship, crew: Crew) -> EndReason    # check_end + end in one call
+func end(reason: EndReason) -> void                 # idempotent, first reason wins
+func current_kind() -> SectorMap.NodeKind
+func current_column() -> int
+func threat_at_player() -> bool
+func threat_distance() -> int
+func was_won() -> bool
+static func end_reason_text(reason: EndReason) -> String
+const SECTOR_CLEAR_FUEL := 8
+```
+
+`check_end` is a **pure report** and does not end the voyage; `settle` is the mutating version. The
+split exists so a screen can ask "am I about to die?" without killing the run by asking.
+
+### `core/ship_combat.gd`
+
+```gdscript
+func begin(player_ship, player_crew, enemy_ship, enemy_crew, p_sector := 1) -> void  # gained p_sector
+func outcome() -> Outcome
+func apply_rewards(economy: Economy, ship: Ship) -> void
+func events() -> Array[CombatEvent]
+func events_of_kind(kind: EventKind) -> Array[CombatEvent]
+func has_event(kind: EventKind) -> bool
+static func make_enemy(p_sector: int, rng: MpRng, rules: GameRules = null) -> Array
+```
+
+**`make_enemy` gained a `rules` parameter.** The contract wrote it as `make_enemy(sector, rng)`, but
+building a `Crew` requires a `Care`, which requires a `GameRules`. It defaults to a fresh
+`GameRules` so the two-argument call in the contract still works.
+
+**`apply_rewards` is separate from `_finish` on purpose.** Reading a `CombatResult` has no side
+effects, so a test can inspect one and the UI can decide when the salvage screen actually credits
+it. A resolver that paid out during `_finish` would make `result()` unsafe to call twice.
+
+### `core/economy.gd`
+
+```gdscript
+var scrap: int: get, set        # the SAME integer as `money`
+func earn_scrap(amount: int) -> void
+func spend_scrap(amount: int) -> bool
+func can_afford_scrap(amount: int) -> bool
+```
+
+### Deferred, and deliberately not stubbed
+
+`core/event.gd`, `core/data/event_db.gd`, `core/stable.gd` and `core/spirit.gd` are specified in §8
+and §9 but **no file was created**. Writing empty stubs would put four files into
+`test_project_compiles` that assert nothing and imply work that has not happened. The contract is
+the deliverable for those; phases 5 and 7 are where they land.
+
+---
+
+## 15. Guardrails, restated because this is the moment they get dropped
 
 * **Core stays pure.** No `Node`, no scene tree, no global `randi()`. Anywhere.
 * **Tests first, then green.** The suite was 538 passing / 0 failing / 0 `SCRIPT ERROR` when the

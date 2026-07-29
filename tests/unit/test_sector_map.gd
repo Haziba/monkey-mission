@@ -619,6 +619,17 @@ func test_mark_visited_sets_the_beacon_and_reveals_only_its_forward_links() -> v
 		var target := int(map.neighbours(map.entry)[0])
 		var target_column: int = map.beacon(target).column
 		var revealed: Array[int] = map.neighbours(target)
+
+		# `generate` now reveals the ENTRY's forward links, so the whole of column 1
+		# is already explored before this call. The property being tested is a
+		# DELTA — "mark_visited reveals its own links and nothing else" — so the
+		# already-explored set has to be excluded, or this test would be asserting
+		# something about generation instead.
+		var already_explored: Array[int] = []
+		for b: SectorMap.Beacon in map.beacons:
+			if b.explored:
+				already_explored.append(b.index)
+
 		map.mark_visited(target)
 
 		var arrived: SectorMap.Beacon = map.beacon(target)
@@ -637,9 +648,9 @@ func test_mark_visited_sets_the_beacon_and_reveals_only_its_forward_links() -> v
 				assert_false(b.visited,
 					"seed %d: revealing beacon %d must NOT also mark it visited — knowing about a beacon is not the same as having burned fuel to get there" % [
 						seed_value, b.index])
-			else:
+			elif not already_explored.has(b.index):
 				assert_false(b.explored,
-					"seed %d: `mark_visited(%d)` revealed beacon %d, which is not one of its links — arriving must reveal only the next hop, never the whole map" % [
+					"seed %d: `mark_visited(%d)` newly revealed beacon %d, which is not one of its links — arriving must reveal only the next hop, never the whole map" % [
 						seed_value, target, b.index])
 			if b.column > target_column + 1:
 				assert_false(b.explored,

@@ -14,7 +14,7 @@ extends TestCase
 ##  1. **An illegal jump is a no-op, not an approximation.** `jump_reason` is the
 ##     single source of truth (`can_jump_to` is defined as "the reason is empty"),
 ##     so the two can never disagree — and a refused jump must leave the beacon,
-##     the fuel and the jump count byte-identical. A jump that half-happened is
+##     the fuel and the jump counters byte-identical. A jump that half-happened is
 ##     the class of bug that desyncs a save.
 ##  2. **`check_end` reports, it does not decide.** A screen polls it on every
 ##     redraw. It must therefore end nothing, change nothing, and — per
@@ -26,6 +26,11 @@ extends TestCase
 ##  4. **The threat's pacing is the pressure.** Grace, then one column per jump,
 ##     and `threat_holds` true for everything at or behind it. Every link in a
 ##     `SectorMap` goes strictly forward, so ground the threat has taken is gone.
+##
+## One real bug came out of writing this file: the threat's grace period was gated
+## on the voyage-total jump count, so only sector 1 ever opened calmly. See
+## `test_each_sector_opens_with_its_own_threat_grace_period`, which was red until
+## `Voyage.jumps_this_sector` was added.
 
 ## Eight pinned seeds. Any invariant worth having holds on all of them; a single
 ## seed only ever proves that a seed exists.
@@ -82,6 +87,7 @@ func _snapshot() -> Dictionary:
 		"sector": voyage.sector,
 		"at": voyage.at,
 		"jumps_taken": voyage.jumps_taken,
+		"jumps_this_sector": voyage.jumps_this_sector,
 		"threat_column": voyage.threat_column,
 		"boss_cleared": voyage.boss_cleared,
 		"ended": voyage.ended,
@@ -144,6 +150,15 @@ func _reach_the_final_boss() -> void:
 	_walk_to_boss()
 
 
+func _push_the_threat_onto_the_player() -> void:
+	var pushes := 0
+	while not voyage.threat_at_player() and pushes < WALK_GUARD:
+		voyage.advance_threat()
+		pushes += 1
+	assert_true(voyage.threat_at_player(),
+		"the threat must be able to reach the ship's own column, or OVERTAKEN is unreachable")
+
+
 func _kill_the_whole_crew() -> void:
 	for member in crew.members:
 		crew.kill(member)
@@ -191,6 +206,8 @@ func test_begin_opens_sector_one_at_the_entry_beacon() -> void:
 		assert_eq(voyage.current_column(), 0,
 			"seed %d: the entry is column 0, so the whole sector still lies ahead" % seed_value)
 		assert_eq(voyage.jumps_taken, 0, "seed %d: no jump has been made yet" % seed_value)
+		assert_eq(voyage.jumps_this_sector, 0,
+			"seed %d: the per-sector counter starts at zero, so sector 1 gets its full grace period" % seed_value)
 		assert_false(voyage.ended, "seed %d: a voyage cannot begin already over" % seed_value)
 		assert_eq(int(voyage.end_reason), int(Voyage.EndReason.NONE),
 			"seed %d: a fresh voyage has no ending recorded" % seed_value)
@@ -200,6 +217,9 @@ func test_begin_opens_sector_one_at_the_entry_beacon() -> void:
 			"seed %d: sector 1 of %d cannot be the last, or the voyage has no depth" % [seed_value, Voyage.SECTORS])
 		assert_true(voyage.map.beacon(voyage.at).visited,
 			"seed %d: the beacon the ship is sitting at must read as visited" % seed_value)
+		assert_eq(ship.fuel, Ship.FUEL_START,
+			"seed %d: opening a sector must not cost fuel — only jumping does, or the tank is wrong before the first decision" % seed_value)
+		assert_eq(ship.hull, ship.hull_max, "seed %d: a voyage departs on a whole hull" % seed_value)
 
 
 func test_begin_draws_its_map_from_the_injected_rng_and_nothing_else() -> void:
@@ -233,13 +253,9 @@ func test_begin_starts_the_threat_behind_the_entry_column() -> void:
 		assert_true(voyage.threat_distance() > 0,
 			"seed %d: there must be clear space between the threat and the ship at departure" % seed_value)
 		assert_eq(int(voyage.check_end(ship, crew)), int(Voyage.EndReason.NONE),
-			"seed %d: a healthy voyage reports no ending on its first frame" % seed_value)
-
-
-func test_begin_spends_none_of_the_ships_stores() -> void:
-	assert_eq(ship.fuel, Ship.FUEL_START,
-		"opening a sector must not cost fuel — only jumping does, or the tank is wrong before the first decision")
-	assert_eq(ship.hull, ship.hull_max, "a voyage departs on a whole hull")
+			"seed %d: a whole hull, a living crew and a distant threat is not an ending" % seed_value)
+		assert_false(voyage.is_over(), "seed %d: a voyage in progress is not over" % seed_value)
+		assert_false(voyage.was_won(), "seed %d: a voyage in progress has not been won" % seed_value)
 
 
 # --- jump legality, §6 -------------------------------------------------------
@@ -260,23 +276,7 @@ func test_options_are_exactly_the_current_beacons_links() -> void:
 			"seed %d: options() must hand back a copy, or a caller can rewrite the map by accident" % seed_value)
 
 
-func test_every_option_lies_exactly_one_column_ahead() -> void:
-	# §7 invariant 5, restated from the voyage's side: this is what makes the
-	# threat a threat. If a link ever went sideways or back, ground the threat had
-	# taken could be re-entered and the pressure would evaporate.
-	for seed_value in SEEDS:
-		_fixture(seed_value)
-		var walked := 0
-		while not voyage.at_boss() and walked < WALK_GUARD:
-			var here := voyage.current_column()
-			for index in voyage.options():
-				assert_eq(voyage.map.beacon(index).column, here + 1,
-					"seed %d: every jump must go forward exactly one column, so the threat can never be outrun backwards" % seed_value)
-			voyage.jump_to(int(voyage.options()[0]), ship)
-			walked += 1
-
-
-func test_can_jump_to_a_neighbour_but_never_to_a_stranger() -> void:
+func test_can_jump_to_a_neighbour_but_never_a_stranger_or_an_index_off_the_map() -> void:
 	for seed_value in SEEDS:
 		_fixture(seed_value)
 		for index in voyage.options():
@@ -287,16 +287,13 @@ func test_can_jump_to_a_neighbour_but_never_to_a_stranger() -> void:
 			"seed %d: beacon %d is not linked from here, so it must be unreachable however much fuel there is" % [seed_value, stranger])
 		assert_false(voyage.can_jump_to(voyage.at, ship),
 			"seed %d: a beacon cannot jump to itself — that would burn fuel for nothing" % seed_value)
-
-
-func test_can_jump_to_rejects_indices_that_are_not_on_the_map() -> void:
-	# A bad index must be refused rather than crash or wrap: the UI computes these
-	# from a click, and a stale click after a redraw is normal.
-	for index in [-1, -99, voyage.map.size(), voyage.map.size() + 100]:
-		assert_false(voyage.can_jump_to(int(index), ship),
-			"index %s is off the map and must be refused, not resolved to some other beacon" % index)
-		assert_ne(voyage.jump_reason(int(index), ship), "",
-			"index %s is off the map, so jump_reason must name a cause" % index)
+		# The UI computes these from a click, and a stale click after a redraw is
+		# normal, so a bad index must be refused rather than wrap onto a beacon.
+		for bad in [-1, -99, voyage.map.size(), voyage.map.size() + 100]:
+			assert_false(voyage.can_jump_to(int(bad), ship),
+				"seed %d: index %s is off the map and must be refused, not resolved to some other beacon" % [seed_value, bad])
+			assert_ne(voyage.jump_reason(int(bad), ship), "",
+				"seed %d: index %s is off the map, so jump_reason must name a cause" % [seed_value, bad])
 
 
 func test_can_jump_to_is_false_once_the_tank_cannot_pay_for_one_jump() -> void:
@@ -317,7 +314,7 @@ func test_jump_reason_is_empty_exactly_when_can_jump_to_is_true() -> void:
 	# The contract's own wording: "" when legal. `can_jump_to` is DEFINED as the
 	# reason being empty, so the danger is not disagreement but a legal jump that
 	# still carries text, or an illegal one that carries none — either would make
-	# the UI lie. Swept over every index and over both fuel states.
+	# the UI lie. Swept over every index and over three fuel states.
 	for seed_value in SEEDS:
 		_fixture(seed_value)
 		for fuel in [Ship.FUEL_START, Voyage.FUEL_PER_JUMP, 0]:
@@ -353,64 +350,54 @@ func test_jump_reason_names_a_cause_for_every_way_a_jump_can_be_illegal() -> voi
 
 # --- an illegal jump changes NOTHING -----------------------------------------
 
-func test_an_illegal_jump_to_a_stranger_changes_nothing() -> void:
+func test_an_illegal_jump_changes_nothing_at_all() -> void:
 	for seed_value in SEEDS:
 		_fixture(seed_value)
+
 		var stranger := _non_neighbour()
 		var before := _snapshot()
 		assert_false(voyage.jump_to(stranger, ship),
 			"seed %d: a jump to an unlinked beacon must report failure" % seed_value)
 		_assert_unchanged(before, "seed %d: a refused jump to an unlinked beacon" % seed_value)
 
-
-func test_an_illegal_jump_with_a_dry_tank_changes_nothing() -> void:
-	for seed_value in SEEDS:
-		_fixture(seed_value)
 		var target := int(voyage.options()[0])
 		ship.fuel = 0
-		var before := _snapshot()
+		before = _snapshot()
 		assert_false(voyage.jump_to(target, ship),
 			"seed %d: a jump with no fuel must report failure" % seed_value)
 		_assert_unchanged(before, "seed %d: a refused jump on a dry tank" % seed_value)
-		assert_eq(ship.fuel, 0,
-			"seed %d: a refused jump must not drive the tank negative" % seed_value)
+		assert_eq(ship.fuel, 0, "seed %d: a refused jump must not drive the tank negative" % seed_value)
 
-
-func test_an_illegal_jump_does_not_move_the_rng() -> void:
-	# A refused jump is, from the run's point of view, a question that was asked
-	# and answered. If it rolled anything, a player mis-clicking would desync the
-	# rest of the voyage from its seed.
-	var stranger := _non_neighbour()
-	var before := rng.state()
-	for _i in POLLS:
-		voyage.jump_to(stranger, ship)
-	assert_eq(rng.state(), before,
-		"%d refused jumps must leave the RNG stream exactly where it was" % POLLS)
+		# A refused jump is, from the run's point of view, a question that was
+		# asked and answered. If it rolled anything, a player mis-clicking would
+		# desync the rest of the voyage from its seed.
+		var stream := rng.state()
+		for _i in POLLS:
+			voyage.jump_to(stranger, ship)
+			voyage.jump_to(target, ship)
+		assert_eq(rng.state(), stream,
+			"seed %d: %d refused jumps must leave the RNG stream exactly where it was" % [seed_value, POLLS * 2])
 
 
 # --- a legal jump ------------------------------------------------------------
 
-func test_a_legal_jump_burns_exactly_one_jumps_worth_of_fuel() -> void:
-	for seed_value in SEEDS:
-		_fixture(seed_value)
-		var fuel_before := ship.fuel
-		assert_true(voyage.jump_to(int(voyage.options()[0]), ship),
-			"seed %d: the first jump out of the entry must succeed on a full tank" % seed_value)
-		assert_eq(ship.fuel, fuel_before - Voyage.FUEL_PER_JUMP,
-			"seed %d: a jump costs exactly FUEL_PER_JUMP — no rounding, no discount" % seed_value)
-
-
-func test_a_legal_jump_moves_the_ship_counts_itself_and_marks_the_beacon() -> void:
+func test_a_legal_jump_burns_one_jumps_fuel_moves_counts_and_marks_the_beacon() -> void:
 	for seed_value in SEEDS:
 		_fixture(seed_value)
 		var target := int(voyage.options()[0])
 		var was_at := voyage.at
+		var fuel_before := ship.fuel
 		var jumps_before := voyage.jumps_taken
-		assert_true(voyage.jump_to(target, ship), "seed %d: fixture check — the jump must be legal" % seed_value)
+		assert_true(voyage.jump_to(target, ship),
+			"seed %d: the first jump out of the entry must succeed on a full tank" % seed_value)
+		assert_eq(ship.fuel, fuel_before - Voyage.FUEL_PER_JUMP,
+			"seed %d: a jump costs exactly FUEL_PER_JUMP — no rounding, no discount" % seed_value)
 		assert_eq(voyage.at, target, "seed %d: a completed jump must actually move the ship" % seed_value)
 		assert_ne(voyage.at, was_at, "seed %d: the ship cannot end a jump where it started" % seed_value)
 		assert_eq(voyage.jumps_taken, jumps_before + 1,
-			"seed %d: jumps_taken drives the threat's grace period, so it must count every jump exactly once" % seed_value)
+			"seed %d: jumps_taken is the voyage odometer and must count every jump exactly once" % seed_value)
+		assert_eq(voyage.jumps_this_sector, 1,
+			"seed %d: jumps_this_sector gates the threat's grace period, so the first jump of a sector must read as 1" % seed_value)
 		assert_true(voyage.map.beacon(target).visited,
 			"seed %d: arriving must mark the beacon visited, or the map cannot draw where you have been" % seed_value)
 		assert_eq(voyage.current_beacon().index, target,
@@ -420,14 +407,20 @@ func test_a_legal_jump_moves_the_ship_counts_itself_and_marks_the_beacon() -> vo
 
 
 func test_a_walked_route_only_ever_gains_ground() -> void:
+	# §7 invariant 5 restated from the voyage's side: this is what makes the threat
+	# a threat. If a link ever went sideways or back, ground the threat had taken
+	# could be re-entered and the pressure would evaporate.
 	for seed_value in SEEDS:
 		_fixture(seed_value)
 		var previous := voyage.current_column()
 		var steps := 0
 		while not voyage.at_boss() and steps < WALK_GUARD:
+			for index in voyage.options():
+				assert_eq(voyage.map.beacon(index).column, previous + 1,
+					"seed %d: every option must lie exactly one column ahead, so progress and the threat measure in the same units" % seed_value)
 			voyage.jump_to(int(voyage.options()[0]), ship)
 			assert_eq(voyage.current_column(), previous + 1,
-				"seed %d: each jump advances exactly one column, so progress and the threat measure in the same units" % seed_value)
+				"seed %d: each jump advances exactly one column" % seed_value)
 			previous = voyage.current_column()
 			steps += 1
 		assert_eq(voyage.jumps_taken, steps,
@@ -466,48 +459,48 @@ func test_the_threat_advances_one_step_per_jump_once_the_grace_is_spent() -> voi
 
 
 func test_each_sector_opens_with_its_own_threat_grace_period() -> void:
-	# SUSPECTED CORE BUG — this test states the behaviour the contract describes,
-	# not the behaviour core currently has.
-	#
-	# `THREAT_GRACE_JUMPS` is documented as "jumps of grace before the threat
-	# starts moving at all, so A SECTOR opens calmly", and `_enter_sector` resets
-	# `threat_column` to THREAT_START_COLUMN on every sector. But `jump_to` gates
-	# the advance on `jumps_taken`, which is the VOYAGE total and is never reset —
-	# so the grace is spent once, in sector 1, and sectors 2 and 3 open with the
-	# threat moving from their very first jump. Observed clearance on a direct line
-	# is 3 columns in sector 1 and 1 column in every sector after it.
-	_walk_to_boss()
-	voyage.clear_boss()
-	assert_true(voyage.enter_next_sector(ship), "fixture check: sector 2 must open")
-	assert_eq(voyage.threat_column, Voyage.THREAT_START_COLUMN,
-		"a new sector resets the threat behind its entry column")
-	for step in Voyage.THREAT_GRACE_JUMPS:
-		voyage.jump_to(int(voyage.options()[0]), ship)
+	# THIS TEST FOUND A REAL BUG. `THREAT_GRACE_JUMPS` is documented as "jumps of
+	# grace before the threat starts moving at all, so A SECTOR opens calmly", and
+	# `_enter_sector` resets `threat_column` behind the new entry — but the advance
+	# used to be gated on `jumps_taken`, the never-reset VOYAGE total, so the grace
+	# was spent once in sector 1 and every sector after it opened with the threat
+	# already moving (observed clearance: 3 columns in sector 1, 1 column after).
+	# Fixed by gating on `jumps_this_sector`. Checked on every sector boundary, not
+	# just the first, so a future refactor cannot half-fix it.
+	var sector_index := 1
+	while sector_index < Voyage.SECTORS:
+		_walk_to_boss()
+		voyage.clear_boss()
+		assert_true(voyage.enter_next_sector(ship),
+			"fixture check: sector %d must open" % (sector_index + 1))
+		sector_index += 1
 		assert_eq(voyage.threat_column, Voyage.THREAT_START_COLUMN,
-			"jump %d of sector 2 is inside the grace period, so the threat must not have moved — the grace is per sector, which is what 'a sector opens calmly' means and what resetting threat_column per sector implies" % (step + 1))
+			"sector %d must reset the threat behind its entry column" % sector_index)
+		for step in Voyage.THREAT_GRACE_JUMPS:
+			voyage.jump_to(int(voyage.options()[0]), ship)
+			assert_eq(voyage.threat_column, Voyage.THREAT_START_COLUMN,
+				"jump %d of sector %d is inside the grace period, so the threat must not have moved — the grace is PER SECTOR, which is what 'a sector opens calmly' means and what resetting threat_column per sector implies" % [
+					step + 1, sector_index])
 
 
 func test_advance_threat_reports_its_new_column_and_closes_the_gap() -> void:
-	var start := voyage.threat_column
-	var distance := voyage.threat_distance()
-	var returned := voyage.advance_threat()
-	assert_eq(returned, start + Voyage.THREAT_COLUMNS_PER_JUMP,
-		"advance_threat must return the column it moved to, so a caller need not re-read the field")
-	assert_eq(voyage.threat_column, returned, "the returned column must be the recorded column")
-	assert_eq(voyage.threat_distance(), distance - Voyage.THREAT_COLUMNS_PER_JUMP,
-		"the clear space between threat and ship must shrink by exactly what the threat gained")
-	voyage.advance_threat()
-	assert_true(voyage.threat_distance() < distance - 1,
-		"repeated advances must keep closing the gap — the threat is the voyage's clock")
-
-
-func test_threat_distance_is_the_gap_between_the_ships_column_and_the_threat() -> void:
 	for seed_value in SEEDS:
 		_fixture(seed_value)
-		for _i in 4:
+		var start := voyage.threat_column
+		var distance := voyage.threat_distance()
+		var returned := voyage.advance_threat()
+		assert_eq(returned, start + Voyage.THREAT_COLUMNS_PER_JUMP,
+			"seed %d: advance_threat must return the column it moved to, so a caller need not re-read the field" % seed_value)
+		assert_eq(voyage.threat_column, returned,
+			"seed %d: the returned column must be the recorded column" % seed_value)
+		assert_eq(voyage.threat_distance(), distance - Voyage.THREAT_COLUMNS_PER_JUMP,
+			"seed %d: the clear space must shrink by exactly what the threat gained" % seed_value)
+		for _i in 3:
 			assert_eq(voyage.threat_distance(), voyage.current_column() - voyage.threat_column,
 				"seed %d: threat_distance is a derived reading of two columns and must never drift from them" % seed_value)
 			voyage.advance_threat()
+		assert_true(voyage.threat_distance() < distance,
+			"seed %d: repeated advances must keep closing the gap — the threat is the voyage's clock" % seed_value)
 
 
 func test_threat_holds_exactly_the_columns_at_or_behind_it() -> void:
@@ -520,34 +513,23 @@ func test_threat_holds_exactly_the_columns_at_or_behind_it() -> void:
 					"seed %d: beacon %d sits in column %d against a threat at %d — 'at or behind' is the whole rule and an off-by-one loses or saves the player wrongly" % [
 						seed_value, index, column, voyage.threat_column])
 			voyage.advance_threat()
-
-
-func test_threat_holds_is_false_for_a_beacon_that_does_not_exist() -> void:
-	for _i in 10:
-		voyage.advance_threat()
-	assert_false(voyage.threat_holds(-1),
-		"an index off the map is not consumed by the threat, however far the threat has come")
-	assert_false(voyage.threat_holds(voyage.map.size()),
-		"one past the last beacon is not a beacon and must not read as taken")
+		for _i in 10:
+			voyage.advance_threat()
+		assert_false(voyage.threat_holds(-1),
+			"seed %d: an index off the map is not consumed by the threat, however far the threat has come" % seed_value)
+		assert_false(voyage.threat_holds(voyage.map.size()),
+			"seed %d: one past the last beacon is not a beacon and must not read as taken" % seed_value)
 
 
 # --- every EndReason, §6 -----------------------------------------------------
 
-func test_a_healthy_voyage_reports_no_ending() -> void:
-	assert_eq(int(voyage.check_end(ship, crew)), int(Voyage.EndReason.NONE),
-		"a whole hull, a living crew and a distant threat is not an ending")
-	assert_false(voyage.is_over(), "check_end reporting NONE must leave the voyage running")
-	assert_false(voyage.was_won(), "a voyage in progress has not been won")
-
-
-func test_hull_lost_when_the_hull_is_gone() -> void:
+func test_hull_loss_and_crew_loss_are_each_an_ending() -> void:
 	ship.take_hull_damage(ship.hull_max)
 	assert_true(ship.is_destroyed(), "fixture check: the hull must actually be gone")
 	assert_eq(int(voyage.check_end(ship, crew)), int(Voyage.EndReason.HULL_LOST),
 		"a destroyed hull is HULL_LOST — the ship is what carries the voyage")
 
-
-func test_crew_lost_when_every_member_is_dead() -> void:
+	_fixture(SEED)
 	_kill_the_whole_crew()
 	assert_eq(int(voyage.check_end(ship, crew)), int(Voyage.EndReason.CREW_LOST),
 		"an intact ship with nobody left alive is CREW_LOST — permadeath is the point")
@@ -556,12 +538,9 @@ func test_crew_lost_when_every_member_is_dead() -> void:
 func test_overtaken_when_the_threat_reaches_the_players_column() -> void:
 	for seed_value in SEEDS:
 		_fixture(seed_value)
-		var pushes := 0
-		while not voyage.threat_at_player() and pushes < WALK_GUARD:
-			voyage.advance_threat()
-			pushes += 1
+		_push_the_threat_onto_the_player()
 		assert_true(voyage.threat_holds(voyage.at),
-			"seed %d: the threat must be able to reach the ship's own column" % seed_value)
+			"seed %d: the ship's own beacon must read as taken" % seed_value)
 		assert_eq(int(voyage.check_end(ship, crew)), int(Voyage.EndReason.OVERTAKEN),
 			"seed %d: being inside the threat's column is OVERTAKEN, whatever the hull says" % seed_value)
 
@@ -582,7 +561,7 @@ func test_stranded_with_no_fuel_and_no_beacon_that_could_supply_it() -> void:
 			"seed %d: one jump's fuel is enough to stop being stranded" % seed_value)
 
 
-func test_parking_on_a_beacon_that_could_supply_fuel_is_not_yet_stranded() -> void:
+func test_a_fuel_bearing_beacon_or_the_boss_itself_is_not_a_stranding() -> void:
 	# STORE and DISTRESS are the two kinds that plausibly hand over fuel, so a dry
 	# tank there is a reprieve rather than an ending. `at` is written directly
 	# because reaching a specific KIND depends on the roll, and what is being
@@ -604,11 +583,10 @@ func test_parking_on_a_beacon_that_could_supply_fuel_is_not_yet_stranded() -> vo
 	assert_true(tested > 0,
 		"no seed produced a STORE or DISTRESS beacon at all, so the stranding reprieve was never exercised")
 
-
-func test_sitting_at_the_boss_with_a_dry_tank_is_an_ending_not_a_stranding() -> void:
 	# The boss is the last column and has no forward links, so "nowhere to go"
 	# describes it permanently. Reporting STRANDED there would rob the player of
 	# the fight they walked the whole sector to reach.
+	_fixture(SEED)
 	_walk_to_boss()
 	ship.fuel = 0
 	assert_true(voyage.options().is_empty(), "fixture check: the boss beacon has no forward routes")
@@ -631,14 +609,12 @@ func test_arriving_at_the_final_boss_is_not_victory_until_it_is_cleared() -> voi
 		"the final sector's boss, beaten, is VICTORY — that is the only way to win")
 
 
-func test_clearing_the_boss_only_counts_while_standing_at_it() -> void:
+func test_clearing_a_boss_needs_the_boss_beacon_and_victory_needs_the_final_sector() -> void:
 	assert_false(voyage.at_boss(), "fixture check: the entry is not the boss")
 	voyage.clear_boss()
 	assert_false(voyage.boss_cleared,
 		"clear_boss away from the boss beacon must do nothing, or a caller could win the sector from its mouth")
 
-
-func test_clearing_a_non_final_boss_is_not_victory() -> void:
 	_walk_to_boss()
 	voyage.clear_boss()
 	assert_true(voyage.boss_cleared, "fixture check: sector 1's boss must be cleared")
@@ -650,48 +626,28 @@ func test_clearing_a_non_final_boss_is_not_victory() -> void:
 func test_victory_outranks_overtaken() -> void:
 	_reach_the_final_boss()
 	voyage.clear_boss()
-	var pushes := 0
-	while not voyage.threat_at_player() and pushes < WALK_GUARD:
-		voyage.advance_threat()
-		pushes += 1
-	assert_true(voyage.threat_at_player(), "fixture check: the threat must have reached the ship")
+	_push_the_threat_onto_the_player()
 	assert_eq(int(voyage.check_end(ship, crew)), int(Voyage.EndReason.VICTORY),
 		"having beaten the final boss it no longer matters that the menace arrived — VICTORY must outrank OVERTAKEN")
 
 
-func test_permadeath_outranks_victory() -> void:
-	# A ship that reaches the end with nobody alive has not won it. CREW_LOST is
-	# checked above VICTORY on purpose.
+func test_permadeath_outranks_victory_and_hull_loss_outranks_everything() -> void:
+	# A ship that reaches the end with nobody alive has not won it: CREW_LOST is
+	# checked above VICTORY on purpose. And with every condition true at once,
+	# HULL_LOST must win — being torn open is the most physical of the endings and
+	# the one the player watched happen.
 	_reach_the_final_boss()
 	voyage.clear_boss()
 	_kill_the_whole_crew()
 	assert_eq(int(voyage.check_end(ship, crew)), int(Voyage.EndReason.CREW_LOST),
 		"the last monkey dying at the finish line is CREW_LOST, not VICTORY — permadeath is not negotiable")
 
-
-func test_hull_lost_outranks_every_other_reason() -> void:
-	# Every condition true at once. HULL_LOST must win, because the ship being
-	# torn open is the most physical of the endings and the one the player watched
-	# happen.
-	_reach_the_final_boss()
-	voyage.clear_boss()
-	while not voyage.threat_at_player():
-		voyage.advance_threat()
-	_kill_the_whole_crew()
+	_push_the_threat_onto_the_player()
 	ship.fuel = 0
 	ship.take_hull_damage(ship.hull_max * 2)
 	assert_true(ship.is_destroyed(), "fixture check: the hull must be gone")
 	assert_eq(int(voyage.check_end(ship, crew)), int(Voyage.EndReason.HULL_LOST),
-		"with victory, permadeath, the threat and a dry tank all true, HULL_LOST must be the reason reported")
-
-
-func test_every_end_reason_carries_player_facing_text_except_none() -> void:
-	for reason in [Voyage.EndReason.VICTORY, Voyage.EndReason.HULL_LOST, Voyage.EndReason.CREW_LOST,
-			Voyage.EndReason.STRANDED, Voyage.EndReason.OVERTAKEN]:
-		assert_ne(Voyage.end_reason_text(reason), "",
-			"reason %d must have something to show the player, or a voyage ends on a blank screen" % int(reason))
-	assert_eq(Voyage.end_reason_text(Voyage.EndReason.NONE), "",
-		"NONE is not an ending and must not announce itself")
+		"with victory, permadeath, the threat and a dry tank all true at once, HULL_LOST must be the reason reported")
 
 
 # --- check_end is a PURE report ----------------------------------------------
@@ -708,6 +664,15 @@ func test_check_end_never_ends_the_voyage_however_often_it_is_called() -> void:
 			"check_end must not write end_reason")
 	_assert_unchanged(before, "%d calls to check_end" % POLLS)
 
+	# GameState builds these in stages, and a screen can ask before both exist.
+	_fixture(SEED)
+	assert_eq(int(voyage.check_end(null, crew)), int(Voyage.EndReason.NONE),
+		"a missing ship is not an ending — it is a caller that has not finished setting up")
+	assert_eq(int(voyage.check_end(ship, null)), int(Voyage.EndReason.NONE),
+		"a missing crew is not CREW_LOST — absent is not dead")
+	assert_eq(int(voyage.check_end(null, null)), int(Voyage.EndReason.NONE),
+		"neither present is still not an ending")
+
 
 func test_every_read_only_question_on_the_voyage_is_free() -> void:
 	# tests/unit/test_core_purity.gd's rule, applied here: a screen polls these on
@@ -717,19 +682,12 @@ func test_every_read_only_question_on_the_voyage_is_free() -> void:
 		"the voyage's read-only questions (options, can_jump_to, jump_reason, threat_holds, check_end and friends) consumed RNG draws across %d polls" % POLLS)
 
 
-func test_check_end_survives_a_missing_ship_or_crew() -> void:
-	# GameState builds these in stages, and a screen can ask before both exist.
-	assert_eq(int(voyage.check_end(null, crew)), int(Voyage.EndReason.NONE),
-		"a missing ship is not an ending — it is a caller that has not finished setting up")
-	assert_eq(int(voyage.check_end(ship, null)), int(Voyage.EndReason.NONE),
-		"a missing crew is not CREW_LOST — absent is not dead")
-	assert_eq(int(voyage.check_end(null, null)), int(Voyage.EndReason.NONE),
-		"neither present is still not an ending")
-
-
 # --- end(), and life after it ------------------------------------------------
 
 func test_end_is_idempotent_and_the_first_reason_wins() -> void:
+	voyage.end(Voyage.EndReason.NONE)
+	assert_false(voyage.ended, "NONE is not a reason to end anything")
+
 	voyage.end(Voyage.EndReason.HULL_LOST)
 	assert_true(voyage.ended, "end must actually end the voyage")
 	assert_eq(int(voyage.end_reason), int(Voyage.EndReason.HULL_LOST), "the reason given must be recorded")
@@ -741,14 +699,19 @@ func test_end_is_idempotent_and_the_first_reason_wins() -> void:
 		"not even VICTORY may overwrite an ending already recorded")
 	assert_false(voyage.was_won(), "a voyage that ended in HULL_LOST was not won")
 
-
-func test_ending_with_no_reason_at_all_does_nothing() -> void:
-	voyage.end(Voyage.EndReason.NONE)
-	assert_false(voyage.ended, "NONE is not a reason to end anything")
-	assert_eq(int(voyage.end_reason), int(Voyage.EndReason.NONE), "NONE must leave the record blank")
+	for reason in [Voyage.EndReason.VICTORY, Voyage.EndReason.HULL_LOST, Voyage.EndReason.CREW_LOST,
+			Voyage.EndReason.STRANDED, Voyage.EndReason.OVERTAKEN]:
+		assert_ne(Voyage.end_reason_text(reason), "",
+			"reason %d must have something to show the player, or a voyage ends on a blank screen" % int(reason))
+	assert_eq(Voyage.end_reason_text(Voyage.EndReason.NONE), "",
+		"NONE is not an ending and must not announce itself")
 
 
 func test_settle_checks_and_ends_in_one_step() -> void:
+	assert_eq(int(voyage.settle(ship, crew)), int(Voyage.EndReason.NONE),
+		"settle on a healthy voyage reports NONE")
+	assert_false(voyage.ended, "settle must not end a voyage that had no reason to end")
+
 	_kill_the_whole_crew()
 	assert_eq(int(voyage.settle(ship, crew)), int(Voyage.EndReason.CREW_LOST),
 		"settle must return the reason it found")
@@ -756,13 +719,7 @@ func test_settle_checks_and_ends_in_one_step() -> void:
 	assert_eq(int(voyage.end_reason), int(Voyage.EndReason.CREW_LOST), "settle must record what it found")
 
 
-func test_a_healthy_voyage_is_not_settled_by_being_asked() -> void:
-	assert_eq(int(voyage.settle(ship, crew)), int(Voyage.EndReason.NONE),
-		"settle on a healthy voyage reports NONE")
-	assert_false(voyage.ended, "settle must not end a voyage that had no reason to end")
-
-
-func test_once_ended_there_are_no_options_and_no_jump_succeeds() -> void:
+func test_once_ended_there_are_no_options_no_jumps_and_no_new_sector() -> void:
 	for seed_value in SEEDS:
 		_fixture(seed_value)
 		var target := int(voyage.options()[0])
@@ -776,15 +733,14 @@ func test_once_ended_there_are_no_options_and_no_jump_succeeds() -> void:
 			"seed %d: jumping after the end must fail" % seed_value)
 		_assert_unchanged(before, "seed %d: a jump attempted after the voyage ended" % seed_value)
 
-
-func test_an_ended_voyage_cannot_open_another_sector() -> void:
+	_fixture(SEED)
 	_walk_to_boss()
 	voyage.clear_boss()
 	voyage.end(Voyage.EndReason.HULL_LOST)
-	var before := _snapshot()
+	var settled := _snapshot()
 	assert_false(voyage.enter_next_sector(ship),
 		"a dead voyage must not sail on, however cleared the boss was")
-	_assert_unchanged(before, "enter_next_sector on an ended voyage")
+	_assert_unchanged(settled, "enter_next_sector on an ended voyage")
 
 
 # --- enter_next_sector, §6 ---------------------------------------------------
@@ -799,15 +755,15 @@ func test_enter_next_sector_refuses_until_the_boss_is_actually_cleared() -> void
 			"seed %d: docking at the boss is not beating it, so the next sector must stay shut" % seed_value)
 		_assert_unchanged(before, "seed %d: a refused enter_next_sector" % seed_value)
 
-
-func test_enter_next_sector_refuses_away_from_the_boss() -> void:
+	# And the mirror case: the flag alone is not the gate either.
+	_fixture(SEED)
 	voyage.jump_to(int(voyage.options()[0]), ship)
 	assert_false(voyage.at_boss(), "fixture check: one jump in is not the boss")
 	voyage.boss_cleared = true
-	var before := _snapshot()
+	var away := _snapshot()
 	assert_false(voyage.enter_next_sector(ship),
 		"the gate out of a sector is its boss beacon — a cleared flag elsewhere must not open it")
-	_assert_unchanged(before, "enter_next_sector away from the boss")
+	_assert_unchanged(away, "enter_next_sector away from the boss")
 
 
 func test_enter_next_sector_refuels_regenerates_and_resets_the_threat() -> void:
@@ -852,6 +808,25 @@ func test_enter_next_sector_refuses_on_the_final_sector() -> void:
 		"the final boss cleared must report VICTORY rather than silently stall the voyage")
 
 
+func test_the_two_jump_counters_diverge_across_a_sector_boundary() -> void:
+	# The whole point of having two counters. If a refactor ever collapses them
+	# back into one, this is what says so.
+	_walk_to_boss()
+	var before_total := voyage.jumps_taken
+	assert_eq(voyage.jumps_this_sector, before_total,
+		"within sector 1 the two counters must agree, since no sector boundary has been crossed")
+
+	voyage.clear_boss()
+	assert_true(voyage.enter_next_sector(ship), "fixture check: sector 2 must open")
+	assert_eq(voyage.jumps_this_sector, 0, "entering a sector must reset the per-sector counter")
+	assert_eq(voyage.jumps_taken, before_total,
+		"but must NOT reset the voyage odometer, which is a running total")
+
+	voyage.jump_to(int(voyage.options()[0]), ship)
+	assert_eq(voyage.jumps_this_sector, 1, "the per-sector counter counts from the sector's start")
+	assert_eq(voyage.jumps_taken, before_total + 1, "the odometer keeps climbing")
+
+
 # --- fuel arithmetic, §7 / §13 row 4 -----------------------------------------
 
 func test_a_direct_line_through_a_sector_is_affordable_on_the_starter_tank() -> void:
@@ -876,18 +851,20 @@ func test_every_route_through_a_sector_costs_exactly_the_same_fuel() -> void:
 	# Links go forward exactly one column and there are COLUMNS columns, so EVERY
 	# route from entry to boss is exactly COLUMNS - 1 jumps. Route choice therefore
 	# cannot change what a sector costs, and the DIVERGENCE comments on
-	# Ship.FUEL_START and SectorMap.COLUMNS — "a player who wanders greedily will
-	# run dry before the boss", "a greedy detour through every beacon does not
-	# [make it]" — describe a trade-off the geometry makes impossible.
+	# `Ship.FUEL_START` and `SectorMap.COLUMNS` — "a player who wanders greedily
+	# will run dry before the boss", "a greedy detour through every beacon does not
+	# [make it]" — describe a trade-off the geometry makes impossible. The second
+	# assertion states the consequence outright: the deepest legal voyage is
+	# cheaper than the starting tank, before a single sector-clear refuel, so fuel
+	# cannot bind and STRANDED is unreachable by play.
 	for seed_value in SEEDS:
 		_fixture(seed_value)
 		var direct := _walk_to_boss()
 		assert_eq(direct, SectorMap.COLUMNS - 1,
-			"seed %d: a sector is exactly COLUMNS - 1 jumps deep whichever way you fly it" % seed_value)
-	# The whole voyage, before a single refuel, costs less than the starter tank.
+			"seed %d: a sector is exactly COLUMNS - 1 jumps deep whichever way you fly it, so route choice has no fuel cost at all" % seed_value)
 	var worst_case := Voyage.SECTORS * (SectorMap.COLUMNS - 1) * Voyage.FUEL_PER_JUMP
 	assert_true(worst_case <= Ship.FUEL_START,
-		"the deepest possible voyage costs %d fuel against a starter tank of %d and %d more per sector cleared, so fuel cannot bind and STRANDED is unreachable by play" % [
+		"the deepest possible voyage costs %d fuel against a starter tank of %d plus %d more per sector cleared — fuel is therefore decorative and STRANDED unreachable, which contradicts the DIVERGENCE notes on Ship.FUEL_START and SectorMap.COLUMNS" % [
 			worst_case, Ship.FUEL_START, Voyage.SECTOR_CLEAR_FUEL])
 
 
@@ -924,7 +901,9 @@ func test_to_dict_and_apply_dict_round_trip_every_field_and_the_map() -> void:
 		assert_eq(restored.sector, voyage.sector, "seed %d: sector must survive a save" % seed_value)
 		assert_eq(restored.at, voyage.at, "seed %d: the beacon the ship is at must survive a save" % seed_value)
 		assert_eq(restored.jumps_taken, voyage.jumps_taken,
-			"seed %d: jumps_taken must survive — it gates the threat's grace period" % seed_value)
+			"seed %d: the voyage odometer must survive a save" % seed_value)
+		assert_eq(restored.jumps_this_sector, voyage.jumps_this_sector,
+			"seed %d: jumps_this_sector must survive, or reloading mid-sector hands the player a fresh grace period — or restores 0 in sector 2 and pauses a threat that had already started moving" % seed_value)
 		assert_eq(restored.threat_column, voyage.threat_column,
 			"seed %d: the threat's column must survive, or a reload gives the pursuit back" % seed_value)
 		assert_eq(restored.boss_cleared, voyage.boss_cleared,
@@ -938,16 +917,16 @@ func test_to_dict_and_apply_dict_round_trip_every_field_and_the_map() -> void:
 		assert_eq(restored.to_dict(), saved,
 			"seed %d: to_dict -> apply_dict -> to_dict must be a fixed point" % seed_value)
 
-
-func test_an_ended_voyage_round_trips_as_ended_for_the_same_reason() -> void:
+	# An ending is part of the state, not a runtime accident.
+	_fixture(SEED)
 	voyage.jump_to(int(voyage.options()[0]), ship)
 	voyage.end(Voyage.EndReason.OVERTAKEN)
-	var restored: Voyage = Voyage.new(rules, MpRng.new(SEED + 1))
-	restored.apply_dict(voyage.to_dict())
-	assert_true(restored.ended, "a loaded save of a finished voyage must still be finished")
-	assert_eq(int(restored.end_reason), int(Voyage.EndReason.OVERTAKEN),
+	var dead: Voyage = Voyage.new(rules, MpRng.new(SEED + 1))
+	dead.apply_dict(voyage.to_dict())
+	assert_true(dead.ended, "a loaded save of a finished voyage must still be finished")
+	assert_eq(int(dead.end_reason), int(Voyage.EndReason.OVERTAKEN),
 		"the cause of death must survive a save, or the end screen lies about what killed the run")
-	assert_true(restored.options().is_empty(), "a restored dead voyage must offer no routes")
+	assert_true(dead.options().is_empty(), "a restored dead voyage must offer no routes")
 
 
 func test_apply_dict_on_an_empty_dictionary_leaves_a_safe_voyage() -> void:
@@ -962,13 +941,15 @@ func test_apply_dict_on_an_empty_dictionary_leaves_a_safe_voyage() -> void:
 		"a chartless voyage must not report an ending it cannot have reached")
 
 
-func test_apply_dict_keeps_the_sector_inside_the_voyages_depth() -> void:
+func test_apply_dict_keeps_the_sector_and_the_counters_inside_their_bounds() -> void:
 	var restored: Voyage = Voyage.new(rules, MpRng.new(SEED))
-	restored.apply_dict({"sector": Voyage.SECTORS + 9, "at": -4, "jumps_taken": -3})
+	restored.apply_dict({"sector": Voyage.SECTORS + 9, "at": -4, "jumps_taken": -3, "jumps_this_sector": -9})
 	assert_in_range(restored.sector, 1, Voyage.SECTORS,
 		"a corrupt sector must be clamped into [1, SECTORS], or is_final_sector and the kind weights both go wrong")
 	assert_true(restored.at >= 0, "a negative beacon index must be clamped, not passed on to the map")
-	assert_true(restored.jumps_taken >= 0, "a negative jump count would hand the threat grace it never earned")
+	assert_true(restored.jumps_taken >= 0, "a negative odometer would report an impossible voyage")
+	assert_true(restored.jumps_this_sector >= 0,
+		"a negative per-sector counter would hand the threat grace it never earned")
 
 
 func test_two_voyages_on_the_same_seed_are_the_same_voyage() -> void:
@@ -982,46 +963,7 @@ func test_two_voyages_on_the_same_seed_are_the_same_voyage() -> void:
 		_walk_to_boss()
 		assert_eq(voyage.to_dict(), first,
 			"seed %d: the same seed and the same choices must produce a byte-identical voyage" % seed_value)
-		assert_eq(ship.fuel, first_fuel,
-			"seed %d: the same route must burn the same fuel" % seed_value)
-
-
-func test_the_per_sector_jump_counter_survives_a_round_trip() -> void:
-	# Added alongside the fix for the bug the test above found. The per-sector
-	# grace period is gated on `jumps_this_sector`, so if that field did not
-	# survive a save, reloading mid-sector would silently hand the player a fresh
-	# grace period — or, worse, reloading in sector 2 would restore a counter of 0
-	# and pause the threat that had already started moving.
-	_walk_to_boss()
-	var expected := voyage.jumps_this_sector
-	assert_true(expected > 0,
-		"fixture check: the walk must have made at least one jump, or this round trip proves nothing")
-
-	var restored := Voyage.new(rules, MpRng.new(SEED))
-	restored.apply_dict(voyage.to_dict())
-	assert_eq(restored.jumps_this_sector, expected,
-		"jumps_this_sector must survive a save, or the threat's grace period resets on reload")
-	assert_eq(restored.jumps_taken, voyage.jumps_taken,
-		"and the voyage odometer must survive alongside it")
-
-
-func test_the_two_jump_counters_diverge_across_a_sector_boundary() -> void:
-	# The whole point of having two counters. If a refactor ever collapses them
-	# back into one, this is what says so.
-	_walk_to_boss()
-	var before_total := voyage.jumps_taken
-	assert_eq(voyage.jumps_this_sector, before_total,
-		"within sector 1 the two counters must agree, since no sector boundary has been crossed")
-
-	voyage.clear_boss()
-	assert_true(voyage.enter_next_sector(ship), "fixture check: sector 2 must open")
-	assert_eq(voyage.jumps_this_sector, 0, "entering a sector must reset the per-sector counter")
-	assert_eq(voyage.jumps_taken, before_total,
-		"but must NOT reset the voyage odometer, which is a running total")
-
-	voyage.jump_to(int(voyage.options()[0]), ship)
-	assert_eq(voyage.jumps_this_sector, 1, "the per-sector counter counts from the sector's start")
-	assert_eq(voyage.jumps_taken, before_total + 1, "the odometer keeps climbing")
+		assert_eq(ship.fuel, first_fuel, "seed %d: the same route must burn the same fuel" % seed_value)
 
 
 func test_different_seeds_produce_different_voyages() -> void:

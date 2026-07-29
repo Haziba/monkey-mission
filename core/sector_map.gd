@@ -25,21 +25,32 @@ const KIND_LABELS: PackedStringArray = [
 	"COMBAT", "STORE", "SAFE", "DISTRESS", "HAZARD", "BOARDING", "BOSS",
 ]
 
-## DIVERGENCE: design §9 #4 — sector shape is [X]. Six columns of up to four rows
-## gives 14..20 beacons, which against `Ship.FUEL_START` of 16 means a direct line
-## through a sector always makes it while a greedy detour through every beacon
-## does not. That tension is the whole point of fuel.
+## DIVERGENCE: design §9 #4 — sector shape is [X]. Six columns: a single entry, a
+## single boss, and four interior columns of 2..4 beacons each. That gives 14..18
+## beacons.
+##
+## CORRECTION: an earlier version of this comment claimed 14..20 and argued that
+## `Ship.FUEL_START` made "a greedy detour through every beacon" unaffordable.
+## Both halves were wrong. 4 interior columns x MAX_COLUMN_WIDTH 4, plus the two
+## terminals, is 18 — 20 was unreachable. And because every link advances exactly
+## one column (see `generate`), EVERY route from entry to boss is exactly
+## `COLUMNS - 1` jumps, so there is no such thing as a detour and route choice
+## costs no fuel at all. See the note on FUEL below and §9 of
+## docs/MORNING-REPORT.md.
 const COLUMNS := 6
 const ROWS := 4
 const MIN_BEACONS := 14
-const MAX_BEACONS := 20
+const MAX_BEACONS := 18
 
 ## Beacons per interior column. Column 0 and the last column are always single.
+## Capped by ROWS so a beacon can never be laid outside the declared grid — the
+## two were previously equal only by coincidence.
 const MIN_COLUMN_WIDTH := 2
 const MAX_COLUMN_WIDTH := 4
 
 ## How many forward links a beacon tries for. More than one is what makes the map
-## a graph rather than a corridor, and what gives the player a route choice.
+## a graph rather than a corridor, and what gives the player a choice of WHICH
+## beacon to visit next — though not, at present, a choice of route LENGTH.
 const MIN_LINKS := 1
 const MAX_LINKS := 3
 
@@ -133,7 +144,7 @@ static func generate(p_sector: int, rng: MpRng) -> SectorMap:
 	for column in COLUMNS:
 		var width := 1
 		if column > 0 and column < COLUMNS - 1:
-			width = rng.randi_range(MIN_COLUMN_WIDTH, MAX_COLUMN_WIDTH)
+			width = rng.randi_range(MIN_COLUMN_WIDTH, mini(MAX_COLUMN_WIDTH, ROWS))
 		var rows: Array[int] = []
 		for row in width:
 			rows.append(row)
@@ -196,10 +207,22 @@ static func generate(p_sector: int, rng: MpRng) -> SectorMap:
 					map.beacons[index].links.append(pick)
 		# 4b. Every beacon in the next column gets at least one way in, or it
 		#     would be unreachable — invariant 3.
+		#
+		#     Prefers a source that is still under MAX_LINKS, so that repairing
+		#     reachability cannot push a beacon past the declared cap. Previously
+		#     this appended to a source chosen at random regardless, which made
+		#     MAX_LINKS not actually a maximum — a beacon could end up with four
+		#     outbound links. Falls back to any source when every candidate is
+		#     already full, because reachability (invariant 3) outranks the cap.
 		for target in ahead:
 			if map._has_inbound(target, here):
 				continue
-			var source := int(here[rng.randi_range(0, here.size() - 1)])
+			var roomy: Array[int] = []
+			for candidate in here:
+				if map.beacons[candidate].links.size() < MAX_LINKS:
+					roomy.append(candidate)
+			var pool := roomy if not roomy.is_empty() else here
+			var source := int(pool[rng.randi_range(0, pool.size() - 1)])
 			map.beacons[source].links.append(target)
 
 	for beacon in map.beacons:
@@ -215,8 +238,13 @@ static func generate(p_sector: int, rng: MpRng) -> SectorMap:
 		else:
 			beacon.kind = map._roll_kind(rng)
 
-	map.beacons[map.entry].visited = true
-	map.beacons[map.entry].explored = true
+	# Via `mark_visited` rather than by setting the two flags directly, so a freshly
+	# generated chart also REVEALS the entry's forward links. Setting them by hand
+	# left the player able to see where they were but not where they could go;
+	# `Voyage._enter_sector` happened to paper over it by calling `mark_visited` a
+	# moment later, which meant any other consumer — a map preview, a `from_dict`
+	# path, any future non-Voyage caller — got a chart with no visible first choice.
+	map.mark_visited(map.entry)
 	return map
 
 
