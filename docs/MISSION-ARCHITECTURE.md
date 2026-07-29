@@ -450,6 +450,26 @@ func to_dict() -> Dictionary
 func apply_dict(d: Dictionary) -> void
 ```
 
+**The damage model, stated precisely** — the original wording here ("a knocked-out bar costs you
+output immediately") was ambiguous enough that a test was written against the wrong reading:
+
+```
+effective_power(s) == min(power_in(s), max_bars(s) - damage(s))
+```
+
+Damage removes **capacity from the top**, and the request is then capped by whatever capacity
+survives. It does **not** subtract from the request. Two consequences, both wanted and both
+FTL's own behaviour:
+
+* **Unpowered headroom is a damage buffer.** A system running 2 bars of a possible 4 shrugs off the
+  first two points of damage entirely. Running below the ceiling is a real defensive choice.
+* **Repair restores output instantly**, because the request was never lowered — the player does not
+  have to notice and re-allocate mid-fight.
+
+The distinguishing case only appears when a system runs *below* its ceiling; at full bars both
+readings agree. `test_ship.gd` pins it in
+`test_unallocated_headroom_absorbs_damage_before_output_does`.
+
 **Fuel and missiles live on the `Ship`, not in `Economy`.** Design §5 groups them under "mostly a
 repoint of `Economy`", but they are physical stores consumed by the ship, and `Economy`'s inventory
 is a food larder keyed by `FoodDb` ids. Putting fuel on the hull keeps `Economy`'s repoint to the one
@@ -798,6 +818,28 @@ Existing files that must be **extended, not replaced**:
 
 And the rule that outranks all of them, from `ARCHITECTURE.md` §20: **a GDScript runtime error inside
 a test body still reports as a pass.** Grep every run for `SCRIPT ERROR` before believing it.
+
+`tests/run.sh` does both jobs — it prints the summary next to the `SCRIPT ERROR` count and exits
+non-zero on either — so use it rather than calling Godot directly.
+
+### The trap: a new `class_name` is invisible until the cache is rebuilt
+
+Adding `core/ship.gd` with `class_name Ship` made **`test_project_compiles` go red immediately**, with
+ten `Parse Error: Identifier "Ship" not declared in the current scope` lines coming from
+`core/crew.gd`. The file was correct; Godot's global class registry
+(`.godot/global_script_class_cache.cfg`) simply did not contain `Ship` yet, and `--script` mode does
+not rebuild it.
+
+```
+/Applications/Godot.app/Contents/MacOS/Godot --headless --path . --editor --quit
+```
+
+Run that once after adding any `class_name`, then re-run the suite. Two things follow:
+
+* **A red `test_project_compiles` after adding a new core class is probably this, not your code.**
+  Check the cache before debugging the file.
+* It is why several existing test files use `extends "res://path/to/thing.gd"` and `preload` instead
+  of the global name — that form needs no cache. Prefer it in tests.
 
 ---
 

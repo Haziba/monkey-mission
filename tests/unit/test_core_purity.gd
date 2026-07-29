@@ -157,3 +157,103 @@ func test_the_facades_read_only_questions_are_free() -> void:
 			gs.free()
 		assert_eq(states[1], states[0],
 			"GameState read-only query #%d moved the run's RNG" % index)
+
+
+# --- Monkey Mission: the same guarantee for the new systems --------------------
+#
+# docs/MISSION-ARCHITECTURE.md §12 requires every new predicate to land here.
+# These are the ones a combat HUD will poll hardest — a power readout and five
+# station performance figures, redrawn every frame — so a leaked draw in any of
+# them would desync a voyage far faster than the original bug desynced a run.
+
+
+func _crew_with(rng: MpRng, friendship: int, fullness: int) -> Crew:
+	var rules := _rules()
+	var crew := Crew.new(rules, rng, Care.new(rules, rng))
+	var monkey := _starter(friendship, fullness)
+	var member := crew.add(monkey)
+	crew.assign(member, Ship.Station.WEAPONS)
+	return crew
+
+
+func test_ships_derived_curves_are_free() -> void:
+	# Ship takes no MpRng at all, which is the strongest form of this guarantee:
+	# it cannot consume a draw because it has nothing to draw from. Asserted
+	# behaviourally anyway, so that adding an rng to Ship fails here immediately.
+	var ship := Ship.make_starter()
+	_assert_pure("Ship.evasion", func(_rng: MpRng) -> void: ship.evasion(1.0, 1.0))
+	_assert_pure("Ship.shield_recharge_rate", func(_rng: MpRng) -> void:
+		ship.shield_recharge_rate(1.0))
+	_assert_pure("Ship.shield_layers_max", func(_rng: MpRng) -> void: ship.shield_layers_max())
+	_assert_pure("Ship.weapon_charge_rate", func(_rng: MpRng) -> void:
+		ship.weapon_charge_rate(1.0))
+	_assert_pure("Ship.weapon_damage", func(_rng: MpRng) -> void: ship.weapon_damage(1.0))
+	_assert_pure("Ship.targeting_bonus", func(_rng: MpRng) -> void: ship.targeting_bonus(1.0))
+	_assert_pure("Ship.jump_charge_rate", func(_rng: MpRng) -> void: ship.jump_charge_rate(1.0))
+	_assert_pure("Ship.effective_power", func(_rng: MpRng) -> void:
+		ship.effective_power(Ship.Station.SHIELDS))
+	_assert_pure("Ship.power_free", func(_rng: MpRng) -> void: ship.power_free())
+	_assert_pure("Ship.is_offline", func(_rng: MpRng) -> void: ship.is_offline(Ship.Station.PILOT))
+	_assert_pure("Ship.is_destroyed", func(_rng: MpRng) -> void: ship.is_destroyed())
+	_assert_pure("Ship.has_hazard", func(_rng: MpRng) -> void: ship.has_hazard())
+
+
+func test_crews_read_only_questions_are_free() -> void:
+	# The interesting case is an UNAVAILABLE member: `is_available` delegates to
+	# Care, and Care.block_reason once rolled a die to pick its flavour text. A
+	# station-performance readout must not inherit that.
+	var cases := {
+		"ready": [Monkey.FRIENDSHIP_MAX, 12],
+		"unbefriended": [0, 12],
+		"starving": [Monkey.FRIENDSHIP_MAX, 0],
+		"stuffed": [Monkey.FRIENDSHIP_MAX, Monkey.FULLNESS_MAX],
+	}
+	for label in cases:
+		var setup: Array = cases[label]
+		var friendship := int(setup[0])
+		var fullness := int(setup[1])
+		_assert_pure("Crew.station_performance (%s)" % label, func(rng: MpRng) -> void:
+			_crew_with(rng, friendship, fullness).station_performance(Ship.Station.WEAPONS))
+		_assert_pure("Crew.is_available (%s)" % label, func(rng: MpRng) -> void:
+			var crew := _crew_with(rng, friendship, fullness)
+			crew.is_available(crew.members[0]))
+		_assert_pure("Crew.unavailable_reason (%s)" % label, func(rng: MpRng) -> void:
+			var crew := _crew_with(rng, friendship, fullness)
+			crew.unavailable_reason(crew.members[0]))
+		_assert_pure("Crew.effective_manning (%s)" % label, func(rng: MpRng) -> void:
+			_crew_with(rng, friendship, fullness).effective_manning(Ship.Station.WEAPONS))
+
+
+func test_crews_progress_queries_are_free() -> void:
+	_assert_pure("Crew.level_ceiling", func(rng: MpRng) -> void:
+		var crew := _crew_with(rng, Monkey.FRIENDSHIP_MAX, 12)
+		crew.level_ceiling(crew.members[0], Ship.Station.WEAPONS))
+	_assert_pure("Crew.xp_rate", func(rng: MpRng) -> void:
+		var crew := _crew_with(rng, Monkey.FRIENDSHIP_MAX, 12)
+		crew.xp_rate(crew.members[0], Ship.Station.WEAPONS))
+	_assert_pure("Crew.level_of", func(rng: MpRng) -> void:
+		var crew := _crew_with(rng, Monkey.FRIENDSHIP_MAX, 12)
+		crew.level_of(crew.members[0], Ship.Station.WEAPONS))
+	_assert_pure("Crew.performance_of", func(rng: MpRng) -> void:
+		var crew := _crew_with(rng, Monkey.FRIENDSHIP_MAX, 12)
+		crew.performance_of(crew.members[0], Ship.Station.PILOT))
+	_assert_pure("Crew.is_incapacitated", func(rng: MpRng) -> void:
+		var crew := _crew_with(rng, Monkey.FRIENDSHIP_MAX, 12)
+		crew.is_incapacitated(crew.members[0]))
+	_assert_pure("Crew.unmanned_stations", func(rng: MpRng) -> void:
+		_crew_with(rng, Monkey.FRIENDSHIP_MAX, 12).unmanned_stations())
+	_assert_pure("Crew.all_dead", func(rng: MpRng) -> void:
+		_crew_with(rng, Monkey.FRIENDSHIP_MAX, 12).all_dead())
+
+
+func test_auto_assign_does_not_touch_the_rng() -> void:
+	# auto_assign MUTATES, so it is not a predicate — but it is documented as
+	# deterministic and RNG-free, and a voyage rebuilding its crew layout must not
+	# be able to shift the stream. Pinned here because this is where anyone would
+	# look for it.
+	_assert_pure("Crew.auto_assign", func(rng: MpRng) -> void:
+		var rules := _rules()
+		var crew := Crew.new(rules, rng, Care.new(rules, rng))
+		for _i in 4:
+			crew.add(RunState.make_starter())
+		crew.auto_assign())
