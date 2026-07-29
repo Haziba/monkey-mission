@@ -112,7 +112,15 @@ const SHIELD_BARS_PER_LAYER := 2
 # the fifth station runs "unmanned or weak early" — weak, not dead.
 
 ## Shield layers per second at full power with nobody manning it.
-const SHIELD_RECHARGE_BASE := 0.22
+##
+## MUST stay slower than `WEAPON_CHARGE_BASE`. A shield layer that comes back
+## faster than the enemy can charge a shot makes the ship literally invulnerable:
+## every shot is absorbed by the one layer, the hull is never touched, and every
+## fight is a 180-second draw. The first version of these numbers did exactly that
+## — 40 out of 40 simulated fights in every sector ended DRAW with 0 hull lost on
+## both sides. `weapon_charge_rate` must beat this comfortably or ship combat does
+## not function at all.
+const SHIELD_RECHARGE_BASE := 0.11
 const SHIELD_RECHARGE_CREW_GAIN := 0.60
 
 ## Evasion from engine hardware alone, per powered bar.
@@ -123,8 +131,14 @@ const EVASION_ENGINE_WEIGHT := 0.07
 ## boxing EVADE strategy — "not fully reliable, you still get hit".
 const EVASION_MAX := 0.80
 
-## Weapon charge, as a fraction of a full charge per second.
-const WEAPON_CHARGE_BASE := 0.14
+## Weapon charge, as a fraction of a full charge per second. At full power and
+## unmanned that is a shot every ~2.5s; at the two bars `make_starter` allocates,
+## roughly every 4s.
+##
+## Deliberately several times `SHIELD_RECHARGE_BASE`, so a ship can strip a shield
+## layer and still land a hit before it comes back. See the note there for what
+## happens when this relationship inverts.
+const WEAPON_CHARGE_BASE := 0.40
 const WEAPON_CHARGE_CREW_GAIN := 0.50
 
 ## Damage per shot. Hardware floor plus a crew contribution, so a trained gunner
