@@ -185,6 +185,35 @@ func jump_to(index: int, ship: Ship) -> bool:
 	return true
 
 
+## Spend time at a beacon WITHOUT moving: the threat gains a column and the ship
+## does not. Returns the threat's new column.
+##
+## THE GAP THIS EXISTS TO CLOSE. As things stand the threat is toothless, and it is
+## worth being precise about why. Every link advances exactly one column, so the
+## player moves +1 per jump; the threat also moves +1 per jump; it starts a column
+## behind and `THREAT_GRACE_JUMPS` buys two more. The gap therefore NEVER shrinks —
+## measured over full voyages on three seeds, the minimum gap ever reached is 2,
+## and `EndReason.OVERTAKEN` needs 0. `_enter_sector` resetting `threat_column`
+## every sector makes it structurally impossible to catch up.
+##
+## Design §5 says the pressure comes from "needing to stop and do things (train,
+## trade, fight) while it does not". That is exactly right, and it is the half that
+## is not implemented: stopping currently costs nothing. Once phase 5 gives beacons
+## their content, every action taken at one should call this — training a monkey,
+## haggling in a store, resolving a distress call, fighting. Then the threat
+## becomes the reason you cannot do everything, which is its entire job.
+##
+## Deliberately NOT wired to anything yet: there is nothing to wire it to until
+## beacons have content, and inventing a cost for actions that do not exist would
+## be guessing. See docs/MORNING-REPORT.md §9.
+func spend_time(columns: int = 1) -> int:
+	if ended or columns <= 0:
+		return threat_column
+	for _i in columns:
+		advance_threat()
+	return threat_column
+
+
 ## Push the threat forward. Returns its new column.
 func advance_threat() -> int:
 	threat_column += THREAT_COLUMNS_PER_JUMP

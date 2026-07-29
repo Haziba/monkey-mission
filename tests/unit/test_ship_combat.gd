@@ -342,6 +342,18 @@ func test_advance_returns_only_the_events_from_that_call() -> void:
 		"every event must be handed out exactly once, or the combat log double-prints")
 	assert_true(streamed > 5, "a decisive fight must produce real commentary (got %d)" % streamed)
 
+	# The corollary, and a real trap: an order is not produced BY advance(), so
+	# POWER_REROUTED and DISOBEYED never come back through it. A HUD has to read
+	# those from the `event_logged` signal or from `events()`.
+	var ordered := _duck(11, 0)
+	ordered.player.crew = _ace_crew()
+	ordered.set_power(Ship.Station.SHIELDS, 2)
+	assert_eq(_count(ordered, ShipCombat.EventKind.POWER_REROUTED), 1,
+		"the order must reach the fight's own log")
+	for event in ordered.advance(ShipCombat.TICK_SECONDS):
+		assert_ne(event.kind, ShipCombat.EventKind.POWER_REROUTED,
+			"but advance() must never hand back an event it did not produce, or the log double-prints it")
+
 
 func test_the_returned_batch_is_a_copy_the_caller_can_keep() -> void:
 	var combat := _brawl(4242)
@@ -387,6 +399,12 @@ func test_advance_after_the_fight_is_over_returns_nothing() -> void:
 			"a finished fight must be inert — the HUD keeps calling advance() while the salvage screen animates in")
 	assert_eq(combat.events().size(), events_at_the_end, "and must not log a thing")
 	assert_almost_eq(combat.elapsed, clock_at_the_end, 0.0001, "and must not move the clock")
+
+	var outcome_at_the_end := combat.outcome()
+	var again := combat.simulate()
+	assert_eq(again.outcome, outcome_at_the_end, "and re-simulating must not re-decide the fight")
+	assert_almost_eq(again.elapsed, clock_at_the_end, 0.0001, "nor extend it")
+	assert_eq(combat.events().size(), events_at_the_end, "nor add to the log")
 
 
 func test_many_small_advances_are_the_same_fight_as_one_big_one() -> void:
@@ -441,19 +459,10 @@ func test_simulate_always_terminates_with_a_terminal_outcome() -> void:
 			"seed %d: COMBAT_END must be the last thing in the log" % seed_value)
 
 
-func test_simulate_after_the_fight_is_a_no_op() -> void:
-	var combat := _brawl(424242)
-	var first := combat.simulate()
-	var events_at_the_end := combat.events().size()
-	var second := combat.simulate()
-	assert_eq(second.outcome, first.outcome, "re-simulating must not re-decide the fight")
-	assert_almost_eq(second.elapsed, first.elapsed, 0.0001, "nor extend it")
-	assert_eq(combat.events().size(), events_at_the_end, "nor add to the log")
-
-
 func test_the_same_seed_replays_the_fight_exactly() -> void:
 	# Orders are issued identically in both runs, because `Care.obeys` always
 	# draws from the stream: a replay is only identical if the ORDERS match too.
+	var signatures := {}
 	for seed_value in SEEDS:
 		var runs: Array[ShipCombat] = []
 		for _i in 2:
@@ -469,16 +478,9 @@ func test_the_same_seed_replays_the_fight_exactly() -> void:
 			"seed %d: and pay the same salvage" % seed_value)
 		assert_almost_eq(runs[0].elapsed, runs[1].elapsed, 0.0001,
 			"seed %d: and take the same time" % seed_value)
-
-
-func test_different_seeds_produce_different_fights() -> void:
-	var signatures := {}
-	for seed_value in SEEDS:
-		var combat := _brawl(seed_value)
-		combat.simulate()
-		signatures[str(_kinds(combat))] = true
+		signatures[str(_kinds(runs[0]))] = true
 	assert_true(signatures.size() > 1,
-		"the fight must not be seed-independent — %d pinned seeds produced %d distinct event streams" % [SEEDS.size(), signatures.size()])
+		"and the fight must not be seed-INdependent either — %d pinned seeds produced %d distinct event streams" % [SEEDS.size(), signatures.size()])
 
 
 func test_simulate_until_stops_on_the_predicate() -> void:
@@ -513,12 +515,11 @@ func test_a_shot_into_shields_pops_one_layer_and_spares_the_hull() -> void:
 	assert_eq(combat.enemy.ship.damage_in(Ship.Station.SHIELDS), 0,
 		"an absorbed shot must not knock out systems — that is a hull-hit consequence")
 
-
-func test_the_shot_after_the_bubble_drops_bites_the_hull() -> void:
-	var combat := _duck(11, 2)
+	# And the shot after that, with the bubble down, must reach the hull — a layer
+	# that came back faster than the gun charges would be invulnerability.
 	combat.advance(ShipCombat.MAX_SECONDS)
 	assert_true(_count(combat, ShipCombat.EventKind.HULL_DAMAGED) > 0,
-		"once the layer is gone the shots must land, or a 1-layer shield is invulnerability")
+		"once the layer is gone the shots must land")
 	assert_true(combat.enemy.ship.hull < combat.enemy.ship.hull_max,
 		"and the hull must actually fall")
 
@@ -569,24 +570,30 @@ func test_a_knocked_out_shield_system_does_not_trickle_back() -> void:
 
 
 func test_shield_layers_never_exceed_what_the_hardware_can_hold() -> void:
-	# SUSPECTED CORE BUG — if this fails, `core/ship_combat.gd` is wrong, not the
-	# test. `set_power` already clamps this ("Shields cannot hold more layers than
-	# the new allocation supports", ship_combat.gd:502), but the DAMAGE path does
-	# not: `_land_hit` and `_burn` both call `Ship.damage_system`, which lowers
-	# `shield_layers_max()` without touching the layers already up. A fire in the
-	# shields room while the bubble is up (the reachable case: fires burn on for
-	# many seconds while shields regenerate) therefore leaves a ship showing a
-	# shield layer its hardware cannot support, and `_regenerate_shields` then
-	# early-returns forever because layers >= maximum.
-	var combat := _combat(11)
-	combat.begin(_ship({Ship.Station.SHIELDS: 4}), _ace_crew(), _ship({}), null)
-	assert_eq(combat.player.shield_layers, 2, "two layers up, as begin() promises")
-	combat.player.ship.damage_system(Ship.Station.SHIELDS, Ship.SYSTEM_BARS_MAX)
-	combat.advance(ShipCombat.TICK_SECONDS * 8.0)
-	assert_eq(combat.player.ship.shield_layers_max(), 0,
-		"the hardware can hold nothing once every bar is knocked out")
-	assert_in_range(combat.player.shield_layers, 0, combat.player.ship.shield_layers_max(),
-		"a ship must never hold more shield layers than its hardware supports — the damage path needs the same clamp set_power already applies")
+	# REGRESSION GUARD for a real, fixed bug: `set_power` clamped the bubble when
+	# the PLAYER rerouted power out of shields, but nothing clamped it when the
+	# shield system was SHOT OUT — so knocking out a ship's shields left it still
+	# holding the layers those dead bars used to support, and the single most
+	# valuable thing you can do to an enemy did almost nothing. The reachable case
+	# is a fire in the shields room, which keeps eating bars for many seconds
+	# while the bubble is up. `_clamp_shields` must stay applied on the damage
+	# path AND on every tick, for BOTH sides.
+	for damaged_side in ["player", "enemy"]:
+		var combat := _combat(11)
+		combat.begin(_ship({Ship.Station.SHIELDS: 4}), _ace_crew(),
+			_ship({Ship.Station.SHIELDS: 4}), _ace_crew())
+		var side: ShipCombat.Combatant = combat.player if damaged_side == "player" else combat.enemy
+		assert_eq(side.shield_layers, 2, "%s: two layers up, as begin() promises" % damaged_side)
+		side.ship.damage_system(Ship.Station.SHIELDS, Ship.SYSTEM_BARS_MAX)
+		combat.advance(ShipCombat.TICK_SECONDS * 8.0)
+		assert_eq(side.ship.shield_layers_max(), 0,
+			"%s: the hardware can hold nothing once every bar is knocked out" % damaged_side)
+		assert_in_range(side.shield_layers, 0, side.ship.shield_layers_max(),
+			"%s: and a ship must never hold more shield layers than its hardware supports" % damaged_side)
+		side.ship.repair_system(Ship.Station.SHIELDS, Ship.SYSTEM_BARS_MAX)
+		combat.advance(ShipCombat.TICK_SECONDS)
+		assert_true(side.shield_layers < 2,
+			"%s: and a repaired shield system must earn its layers back by recharging, not be handed them" % damaged_side)
 
 
 # --- evasion and targeting ----------------------------------------------------
@@ -614,6 +621,17 @@ func test_a_piloted_ship_evades_far_more_than_an_unpiloted_one() -> void:
 	assert_true(int(evades[true]) < int(shots[true]),
 		"and evasion must never be certainty (Ship.EVASION_MAX): %d of %d" % [int(evades[true]), int(shots[true])])
 
+	# The floor of the floor: with the engines unpowered there is no evasion at
+	# all, because a pilot cannot dodge with nothing to dodge with.
+	var pinned := _duck(65537, 0, 1000)
+	pinned.simulate(60.0)
+	assert_true(_count(pinned, ShipCombat.EventKind.SHOT_FIRED) > 0, "shots must have been fired")
+	assert_eq(_count(pinned, ShipCombat.EventKind.SHOT_EVADED), 0,
+		"an engineless ship must never evade anything")
+	assert_eq(_count(pinned, ShipCombat.EventKind.HULL_DAMAGED),
+		_count(pinned, ShipCombat.EventKind.SHOT_FIRED),
+		"so with no shields either, every single shot must land")
+
 
 func test_sensors_targeting_cancels_the_defenders_evasion() -> void:
 	# Same defender (a maxed pilot) in both arms; the only difference is whether
@@ -629,17 +647,6 @@ func test_sensors_targeting_cancels_the_defenders_evasion() -> void:
 		aimed_evades += _count(aimed, ShipCombat.EventKind.SHOT_EVADED)
 	assert_true(aimed_evades * 2 < blind_evades,
 		"a manned sensors station must shave real evasion off the defender — KNOWLEDGE gating the good shot is the heir to the original's special punches (%d evades aimed vs %d blind)" % [aimed_evades, blind_evades])
-
-
-func test_a_ship_with_no_engines_cannot_evade_at_all() -> void:
-	var combat := _duck(65537, 0, 1000)
-	combat.simulate(60.0)
-	assert_true(_count(combat, ShipCombat.EventKind.SHOT_FIRED) > 0, "shots must have been fired")
-	assert_eq(_count(combat, ShipCombat.EventKind.SHOT_EVADED), 0,
-		"a pilot cannot dodge with nothing to dodge with — no engines means no evasion at all")
-	assert_eq(_count(combat, ShipCombat.EventKind.HULL_DAMAGED),
-		_count(combat, ShipCombat.EventKind.SHOT_FIRED),
-		"so with no shields either, every single shot must land")
 
 
 # --- hull, and the ways a fight ends ------------------------------------------
@@ -672,6 +679,15 @@ func test_losing_the_hull_ends_the_fight_as_player_destroyed() -> void:
 	assert_eq(result.scrap_reward, 0, "a wreck earns nothing")
 	assert_eq(result.hull_lost, 20, "and reports every point of hull it lost")
 
+	# The other half of the same accounting: hull_lost is the PLAYER's bill, and
+	# must never include the damage they dealt.
+	var practice := _range_practice(20250728, false, false)
+	var practice_result := practice.simulate(60.0)
+	assert_true(_sum_amounts(practice, ShipCombat.EventKind.HULL_DAMAGED) > 0,
+		"the enemy must have taken a beating for this half to mean anything")
+	assert_eq(practice_result.hull_lost, 0,
+		"hull_lost must not charge the player for the damage they dealt")
+
 
 func test_two_unarmed_ships_end_in_a_draw_at_the_time_limit() -> void:
 	var combat := _combat(4242)
@@ -685,15 +701,6 @@ func test_two_unarmed_ships_end_in_a_draw_at_the_time_limit() -> void:
 		"two harmless ships have nothing to say but hello and goodbye")
 	assert_eq(result.scrap_reward, 0, "a draw pays nothing")
 	assert_true(result.player_survived(), "but the player walks away")
-
-
-func test_hull_lost_counts_only_the_players_own_damage() -> void:
-	var combat := _range_practice(20250728, false, false)
-	var result := combat.simulate(60.0)
-	assert_true(_sum_amounts(combat, ShipCombat.EventKind.HULL_DAMAGED) > 0,
-		"the enemy must have taken a beating for this test to mean anything")
-	assert_eq(result.hull_lost, 0,
-		"hull_lost is the PLAYER's bill — the repair screen must not charge them for the damage they dealt")
 
 
 func test_hull_damage_is_attributed_to_the_ship_it_landed_on() -> void:
@@ -741,38 +748,34 @@ func test_being_shot_at_never_kills_a_monkey() -> void:
 	assert_true(knocked_out > 0,
 		"and a 6-Strength crew under fire must actually go down (out cold, still alive): %d knocked out" % knocked_out)
 
-
-func test_hazards_wear_the_crew_down_without_killing_anybody() -> void:
-	# Fires and breaches hurt fractionally per second and accumulate through
-	# `_hurt_over_time`; the accumulator is what makes 0.8/second land at all on
-	# a 0.25s tick, and it must not become a second, sneakier way to die.
+	# Fires and breaches are the second, sneakier route: they hurt fractionally
+	# per second through `_hurt_over_time`, and must not become a way to die.
 	var burns := 0
 	var holes := 0
 	for seed_value in SEEDS:
-		var crew := _glass_crew()
-		var combat := _firing_squad(seed_value, crew, 200)
-		combat.simulate()
-		burns += _count(combat, ShipCombat.EventKind.FIRE_STARTED)
-		holes += _count(combat, ShipCombat.EventKind.BREACH_OPENED)
-		for member in crew.members:
+		var hazard_crew := _glass_crew()
+		var hazard_fight := _firing_squad(seed_value, hazard_crew, 200)
+		hazard_fight.simulate()
+		burns += _count(hazard_fight, ShipCombat.EventKind.FIRE_STARTED)
+		holes += _count(hazard_fight, ShipCombat.EventKind.BREACH_OPENED)
+		for member in hazard_crew.members:
 			assert_true(member.alive,
 				"seed %d: fire and vacuum must not kill %s either" % [seed_value, member.display_name()])
 	assert_true(burns > 0, "the sample must contain fires (%d)" % burns)
 	assert_true(holes > 0, "and breaches (%d)" % holes)
 
-
-func test_only_an_explicit_kill_ends_a_life() -> void:
-	var combat := _duck(11, 0)
-	var crew := _glass_crew()
-	combat.player.crew = crew
-	var member := crew.manning(Ship.Station.WEAPONS)
-	assert_eq(crew.hurt(member, 999), 6, "hurt() applies only what the health bar had left")
-	assert_true(member.alive, "and leaves the monkey alive at zero Strength — a KO, not a death")
-	assert_true(crew.is_incapacitated(member), "but out cold, so its station reads as empty")
-	assert_eq(combat.player.performance(Ship.Station.WEAPONS), 0.0,
-		"an unconscious gunner contributes nothing, which is what makes damage matter at all")
-	crew.kill(member)
-	assert_false(member.alive, "Crew.kill() is the only door out")
+	# And the one door that IS lethal, for contrast.
+	var last := _duck(11, 0)
+	var glass := _glass_crew()
+	last.player.crew = glass
+	var gunner := glass.manning(Ship.Station.WEAPONS)
+	assert_eq(glass.hurt(gunner, 999), 6, "hurt() applies only what the health bar had left")
+	assert_true(gunner.alive, "and leaves the monkey alive at zero Strength — a KO, not a death")
+	assert_true(glass.is_incapacitated(gunner), "but out cold, so its station reads as empty")
+	assert_eq(last.player.performance(Ship.Station.WEAPONS), 0.0,
+		"an unconscious gunner contributes nothing, which is what makes crew damage matter at all")
+	glass.kill(gunner)
+	assert_false(gunner.alive, "Crew.kill() is the only door out")
 
 
 # --- orders, and obedience ---------------------------------------------------
@@ -836,15 +839,15 @@ func test_a_befriended_monkey_never_refuses() -> void:
 		"so nothing may be logged as ignored")
 	assert_eq(care.obey_calls, 20, "one roll per order, still — even when it is certain to obey")
 
-
-func test_disobedience_can_be_switched_off_entirely() -> void:
+	# The same guarantee from the other direction: with the rule switched off,
+	# even a friendship-0 monkey obeys.
 	rules.disobedience_enabled = false
-	var combat := _duck(4242, 0)
-	combat.player.crew = _ace_crew(0)
-	for i in 12:
-		assert_true(combat.set_power(Ship.Station.SHIELDS, 1 + (i % 4)),
-			"with the rule off, even a friendship-0 monkey must obey (GameRules.disobedience_enabled)")
-	assert_eq(_count(combat, ShipCombat.EventKind.DISOBEYED), 0, "and nothing may be logged")
+	var loyal := _duck(4242, 0)
+	loyal.player.crew = _ace_crew(0)
+	for order in 12:
+		assert_true(loyal.set_power(Ship.Station.SHIELDS, 1 + (order % 4)),
+			"with GameRules.disobedience_enabled off, an unbefriended monkey must still obey")
+	assert_eq(_count(loyal, ShipCombat.EventKind.DISOBEYED), 0, "and nothing may be logged")
 
 
 func test_a_forced_refusal_changes_nothing_but_the_log() -> void:
@@ -902,16 +905,15 @@ func test_set_power_can_never_overdraw_the_reactor() -> void:
 			assert_in_range(ship.power_in(station), 0, Ship.SYSTEM_BARS_MAX,
 				"seed %d: station %d must stay inside its own ceiling" % [seed_value, station])
 
-
-func test_set_power_refuses_a_station_that_does_not_exist() -> void:
-	var combat := _duck(11, 0)
-	combat.player.crew = _ace_crew()
-	var used_before := combat.player.ship.power_used()
-	assert_false(combat.set_power(99, 2), "there is no sixth station (Ship.STATIONS is the whole map)")
-	assert_false(combat.set_power(-1, 2), "nor a station below Pilot")
-	assert_eq(combat.player.ship.power_used(), used_before, "and neither call may move any power")
-	assert_eq(care.obey_calls, 0,
-		"a nonsense order must be rejected before it costs an obedience roll")
+	# A station that does not exist must be rejected outright — and before it
+	# costs an obedience roll, because a wasted roll would shift the RNG stream.
+	var probe := _duck(11, 0)
+	probe.player.crew = _ace_crew()
+	var used_before := probe.player.ship.power_used()
+	assert_false(probe.set_power(99, 2), "there is no sixth station (Ship.STATIONS is the whole map)")
+	assert_false(probe.set_power(-1, 2), "nor a station below Pilot")
+	assert_eq(probe.player.ship.power_used(), used_before, "and neither call may move a single bar")
+	assert_eq(care.obey_calls, 0, "nor consume an obedience roll")
 
 
 func test_robbing_the_shields_drops_the_layers_they_can_no_longer_hold() -> void:
@@ -942,23 +944,6 @@ func test_set_target_moves_the_aim_once_and_logs_it() -> void:
 	for event in combat.events_of_kind(ShipCombat.EventKind.SHOT_FIRED):
 		assert_eq(event.station, Ship.Station.ENGINES,
 			"every subsequent shot must be logged against the station the player chose")
-
-
-func test_order_events_reach_the_log_even_though_advance_never_returns_them() -> void:
-	# `advance` returns "only the events this call produced", and an order is not
-	# produced by a call to advance. So a HUD that feeds its combat log purely
-	# from advance()'s return value will never show POWER_REROUTED or DISOBEYED:
-	# it has to use the `event_logged` signal or `events()`. Pinned because it is
-	# a real trap, not because it is wrong.
-	var combat := _duck(11, 0)
-	combat.player.crew = _ace_crew()
-	combat.set_power(Ship.Station.SHIELDS, 2)
-	assert_eq(_count(combat, ShipCombat.EventKind.POWER_REROUTED), 1,
-		"the order must be in the fight's own log")
-	var returned := combat.advance(ShipCombat.TICK_SECONDS)
-	for event in returned:
-		assert_ne(event.kind, ShipCombat.EventKind.POWER_REROUTED,
-			"but advance() must not hand back an event it did not produce, or the log double-prints it")
 
 
 func test_orders_are_refused_once_the_fight_is_over() -> void:
@@ -993,20 +978,17 @@ func test_the_jump_drive_only_charges_while_escaping() -> void:
 	assert_true(combat.player.jump_charge > 0.0, "and only then does the drive spin up")
 	assert_false(combat.is_finished(), "one second is not a whole jump")
 
-
-func test_a_full_jump_charge_ends_the_fight_as_player_escaped() -> void:
-	var combat := _combat(1337)
-	combat.begin(_ship({Ship.Station.ENGINES: 4}), null, _ship({}), null)
-	combat.begin_escape()
+	# And left to charge, it must end the fight as an escape.
 	var result := combat.simulate()
 	assert_eq(result.outcome, ShipCombat.Outcome.PLAYER_ESCAPED,
-		"reaching a full charge must end the fight as an escape — this is the escape hatch that makes a losing fight survivable")
+		"a full jump charge must end the fight as an escape — this is the hatch that makes a losing fight survivable")
 	assert_true(combat.has_event(ShipCombat.EventKind.JUMP_CHARGED),
 		"and log the moment the drive came ready")
 	assert_almost_eq(combat.player.jump_charge, 1.0, 0.0001, "the charge caps at exactly full")
 	assert_true(result.player_survived(), "escaping is survival")
 	assert_false(result.player_won(), "but it is not a win")
-	assert_eq(result.scrap_reward, 0, "and it pays nothing — escaping with your life is its own reward")
+	assert_eq(result.scrap_reward, 0,
+		"and it pays nothing — escaping with your life is its own reward")
 
 
 func test_a_ship_with_dead_engines_can_never_escape() -> void:
@@ -1043,14 +1025,14 @@ func test_a_badly_hurt_enemy_runs_for_it() -> void:
 	assert_eq(result.scrap_reward, 0, "and the salvage with it")
 	assert_true(result.player_survived(), "but the player is fine")
 
-
-func test_a_healthy_enemy_stands_and_fights() -> void:
-	var combat := _combat(99991)
-	combat.begin(_ship({}), null, _ship({Ship.Station.ENGINES: 2}, 100), null)
-	var result := combat.simulate()
-	assert_false(combat.enemy.escaping,
+	# The control: an undamaged enemy must never decide to run.
+	var healthy := _combat(99991)
+	healthy.begin(_ship({}), null, _ship({Ship.Station.ENGINES: 2}, 100), null)
+	var healthy_result := healthy.simulate()
+	assert_false(healthy.enemy.escaping,
 		"an undamaged enemy must never flee, or no fight would ever be winnable")
-	assert_eq(result.outcome, ShipCombat.Outcome.DRAW, "so the engagement runs out the clock instead")
+	assert_eq(healthy_result.outcome, ShipCombat.Outcome.DRAW,
+		"so that engagement runs out the clock instead")
 
 
 # --- salvage -----------------------------------------------------------------
@@ -1083,22 +1065,19 @@ func test_only_a_kill_pays_scrap() -> void:
 		assert_eq(result.fuel_reward, 0, "%s: and nothing else either" % setup)
 		assert_eq(result.missiles_reward, 0, "%s: no missiles from a fight you did not win" % setup)
 
-
-func test_the_scrap_reward_scales_with_the_sector() -> void:
-	var shallow := _duck(11, 0, 40)
-	shallow.simulate()
+	# And the reward scales with depth, which is the only reason to press on.
 	var deep := _combat(11)
 	deep.begin(_ship({Ship.Station.WEAPONS: 4}),
 		_crew_at(Ship.Station.WEAPONS, _ace(Ship.Station.WEAPONS)),
 		_ship({}, 40), null, 4)
 	deep.simulate()
-	assert_eq(deep.result().outcome, ShipCombat.Outcome.PLAYER_WON, "both fights must be wins")
-	assert_true(deep.result().scrap_reward > shallow.result().scrap_reward,
-		"deeper sectors must pay better or there is no reason to press on (%d in sector 4 vs %d in sector 1)"
-			% [deep.result().scrap_reward, shallow.result().scrap_reward])
+	assert_eq(deep.result().outcome, ShipCombat.Outcome.PLAYER_WON, "the deep fight must also be a win")
 	assert_eq(deep.result().scrap_reward,
 		ShipCombat.SCRAP_REWARD_BASE + ShipCombat.SCRAP_REWARD_PER_SECTOR * 3,
-		"and the scaling must be the documented one, three sectors deep")
+		"and three sectors deep must pay three increments more")
+	assert_true(deep.result().scrap_reward > win_result.scrap_reward,
+		"deeper sectors must pay better (%d in sector 4 vs %d in sector 1)"
+			% [deep.result().scrap_reward, win_result.scrap_reward])
 
 
 func test_apply_rewards_credits_the_purse_and_the_stores() -> void:
@@ -1118,18 +1097,17 @@ func test_apply_rewards_credits_the_purse_and_the_stores() -> void:
 	assert_eq(ship.fuel, fuel_before + result.fuel_reward, "and the fuel it promised")
 	assert_eq(ship.missiles, missiles_before + result.missiles_reward, "and the missiles")
 
-
-func test_apply_rewards_is_a_no_op_after_a_loss() -> void:
-	var combat := _firing_squad(4242, _ace_crew())
-	var economy := Economy.new(rules)
-	var scrap_before := economy.scrap
-	var fuel_before := combat.player.ship.fuel
-	combat.simulate()
-	combat.apply_rewards(economy, combat.player.ship)
-	assert_eq(economy.scrap, scrap_before, "a wreck must not pay out")
-	assert_eq(combat.player.ship.fuel, fuel_before, "nor top up the tank")
-	combat.apply_rewards(null, null)
-	assert_eq(economy.scrap, scrap_before, "and a null economy or ship must not crash the salvage step")
+	# And a loss must credit nothing at all.
+	var purse := economy.scrap
+	var lost := _firing_squad(4242, _ace_crew())
+	var lost_ship := lost.player.ship
+	var lost_fuel := lost_ship.fuel
+	lost.simulate()
+	lost.apply_rewards(economy, lost_ship)
+	assert_eq(economy.scrap, purse, "a wreck must not pay out")
+	assert_eq(lost_ship.fuel, lost_fuel, "nor top up the tank")
+	lost.apply_rewards(null, null)
+	assert_eq(economy.scrap, purse, "and a null economy or ship must not crash the salvage step")
 
 
 func test_reading_the_result_has_no_side_effects() -> void:
@@ -1246,16 +1224,18 @@ func test_make_enemy_survives_a_nonsense_sector_and_a_missing_rules() -> void:
 		"and a crew, with its own default GameRules")
 
 
-# --- station XP (design §4: it accrues from DOING) ----------------------------
-
-func test_the_players_crew_learns_from_the_fight() -> void:
+func test_the_players_crew_learns_from_the_fight_and_the_enemys_does_not() -> void:
+	# Design §4: station XP accrues from DOING. And only the player's crew keeps
+	# it — the enemy's Crew is thrown away when the fight ends, so spending XP on
+	# it would be wasted work.
 	var combat := _combat(11)
 	var crew := _ace_crew()
-	combat.begin(_war_ship(), crew, _ship({}, 400), null, 1)
+	var enemy_crew := _ace_crew()
+	combat.begin(_war_ship(), crew, _ship({Ship.Station.SHIELDS: 2}, 400), enemy_crew, 1)
 	combat.simulate()
 	var gunner := crew.manning(Ship.Station.WEAPONS)
 	assert_true(gunner.xp_in(Ship.Station.WEAPONS) > 0.0,
-		"the monkey firing the gun must earn Weapons XP — station XP accrues from doing (§4)")
+		"the monkey firing the gun must earn Weapons XP")
 	assert_true(gunner.level_in(Ship.Station.WEAPONS) > 0,
 		"and a whole fight at the console must be worth at least one level (%.1f XP)"
 			% gunner.xp_in(Ship.Station.WEAPONS))
@@ -1269,19 +1249,10 @@ func test_the_players_crew_learns_from_the_fight() -> void:
 			assert_true(member.level_in(station) <= member.ceiling_in(station),
 				"%s's level at station %d must never pass the ceiling its trained stat permits — that chain is the whole of the breeding meta"
 					% [member.display_name(), station])
-
-
-func test_the_enemys_station_xp_is_thrown_away() -> void:
-	# The enemy crew is deleted when the fight ends, so any XP spent on it is
-	# wasted work — and `_award` says so explicitly.
-	var combat := _combat(1337)
-	var enemy_crew := _ace_crew()
-	combat.begin(_war_ship(), _ace_crew(), _war_ship(), enemy_crew, 2)
-	combat.simulate()
 	for member in enemy_crew.members:
 		for station in Ship.STATIONS:
 			assert_almost_eq(member.xp_in(station), 0.0, 0.0001,
-				"the enemy's %s must earn nothing at station %d — only the player's crew levels up"
+				"the enemy's %s must earn nothing at station %d — its progress is discarded, so awarding it would be dead work"
 					% [member.display_name(), station])
 
 
@@ -1422,18 +1393,16 @@ func test_a_crewless_ship_still_fights_to_a_finish() -> void:
 		assert_true(combat.set_power(Ship.Station.WEAPONS, 1) or combat.is_finished(),
 			"seed %d: and an order aboard a crewless ship has nobody to refuse it" % seed_value)
 
-
-func test_a_missing_care_never_crashes_the_fight() -> void:
+	# And a resolver built with no Care at all must not crash when ordered about.
 	var lone_rng := MpRng.new(65537)
-	var combat := ShipCombat.new(rules, lone_rng, null)
-	care = CountingCare.new(rules, lone_rng)
 	rng = lone_rng
-	combat.begin(_war_ship(), _ace_crew(0), _war_ship(), _ace_crew(0), 1)
-	assert_true(combat.set_power(Ship.Station.WEAPONS, 4),
-		"with no Care to ask, orders must go through rather than crash — the same stance MatchResolver takes")
-	var result := combat.simulate()
-	assert_true(combat.is_finished(), "and the fight must still resolve")
-	assert_ne(result.outcome, ShipCombat.Outcome.NONE, "with a real outcome")
+	care = CountingCare.new(rules, lone_rng)
+	var careless := ShipCombat.new(rules, lone_rng, null)
+	careless.begin(_war_ship(), _ace_crew(0), _war_ship(), _ace_crew(0), 1)
+	assert_true(careless.set_power(Ship.Station.WEAPONS, 4),
+		"with no Care to ask there is nobody to refuse, so the order must land rather than crash — MatchResolver takes the same stance")
+	assert_ne(careless.simulate().outcome, ShipCombat.Outcome.NONE,
+		"and the fight must still resolve")
 
 
 func test_every_event_carries_commentary_and_a_sane_clock() -> void:
@@ -1454,3 +1423,204 @@ func test_every_event_carries_commentary_and_a_sane_clock() -> void:
 			assert_true(event.amount >= 0,
 				"seed %d: and a non-negative amount, since the HUD prints it raw" % seed_value)
 
+
+# --- damage control ------------------------------------------------------------
+#
+# Added with the repair mechanic itself. Without repair, an engine hit is
+# unrecoverable: Ship.evasion and Ship.jump_charge_rate both return 0.0 with
+# engines offline, so a ship whose engines are shot out can neither dodge nor run
+# and the rest of the fight is a formality. Repair is done by FLOATERS — crew who
+# are not at a station — which is what makes it a decision rather than a freebie.
+
+
+## A ship with a wrecked system, and a crew with `floaters` spare bodies.
+func _damage_control_fixture(seed_value: int, floaters: int) -> Array:
+	var combat := _combat(seed_value)
+	var ship := _ship({Ship.Station.ENGINES: 4, Ship.Station.WEAPONS: 2})
+	var crew := Crew.new(rules, rng, care)
+	crew.add(_ace(Ship.Station.WEAPONS))
+	crew.auto_assign()
+	for index in floaters:
+		var spare := _ace(Ship.Station.SHIELDS)
+		spare.monkey_name = "SPARE %d" % index
+		var member := crew.add(spare)
+		crew.unassign(member)
+	var pair := ShipCombat.make_enemy(1, rng, rules)
+	combat.begin(ship, crew, pair[0] as Ship, pair[1] as Crew, 1)
+	return [combat, ship, crew]
+
+
+func test_a_floater_repairs_a_wrecked_system() -> void:
+	var parts := _damage_control_fixture(11, 1)
+	var combat: ShipCombat = parts[0]
+	var ship: Ship = parts[1]
+	ship.damage_system(int(Ship.Station.ENGINES), Ship.SYSTEM_BARS_MAX)
+	assert_true(ship.is_offline(int(Ship.Station.ENGINES)),
+		"fixture check: the engines must actually be dead before anyone repairs them")
+
+	combat.advance(60.0)
+	assert_true(ship.damage_in(int(Ship.Station.ENGINES)) < Ship.SYSTEM_BARS_MAX,
+		"a spare crew member must repair a wrecked system — otherwise an engine hit is an unrecoverable death spiral")
+	assert_true(combat.has_event(ShipCombat.EventKind.SYSTEM_REPAIRED),
+		"and the repair must be reported, or the player cannot see damage control working")
+
+
+func test_nobody_spare_means_nobody_repairs() -> void:
+	# The cost that makes it a decision: with every monkey at a console, damage
+	# control does not happen. A voyage starts with 4 crew for 5 stations and no
+	# floaters, so repairing means giving up a manned station.
+	var parts := _damage_control_fixture(11, 0)
+	var combat: ShipCombat = parts[0]
+	var ship: Ship = parts[1]
+	ship.damage_system(int(Ship.Station.ENGINES), Ship.SYSTEM_BARS_MAX)
+	combat.advance(60.0)
+	assert_eq(ship.damage_in(int(Ship.Station.ENGINES)), Ship.SYSTEM_BARS_MAX,
+		"with no floaters there is nobody to send, so the damage must stand")
+	assert_false(combat.has_event(ShipCombat.EventKind.SYSTEM_REPAIRED),
+		"and nothing may be reported as repaired")
+
+
+func test_a_floater_who_cannot_act_does_not_repair() -> void:
+	# Both faithful rules reach damage control, because availability goes through
+	# Care: an overfed monkey cannot be press-ganged into firefighting either.
+	var parts := _damage_control_fixture(11, 1)
+	var combat: ShipCombat = parts[0]
+	var ship: Ship = parts[1]
+	var crew: Crew = parts[2]
+	var spare: Crew.Member = crew.floaters()[0]
+	spare.monkey.fullness = Monkey.FULLNESS_MAX
+	assert_false(crew.is_available(spare),
+		"fixture check: an overfed monkey must be unavailable — overfeeding_paralyses is FAITHFUL")
+
+	ship.damage_system(int(Ship.Station.ENGINES), Ship.SYSTEM_BARS_MAX)
+	combat.advance(60.0)
+	assert_eq(ship.damage_in(int(Ship.Station.ENGINES)), Ship.SYSTEM_BARS_MAX,
+		"a monkey immobilised by its own stomach cannot do damage control")
+
+
+func test_a_floater_puts_out_a_fire_before_patching_plating() -> void:
+	# Fires keep doing damage while they burn, so they outrank cosmetic repair. The
+	# priority order is fixed rather than rolled, so a replay is identical.
+	var parts := _damage_control_fixture(11, 1)
+	var combat: ShipCombat = parts[0]
+	var ship: Ship = parts[1]
+	ship.damage_system(int(Ship.Station.WEAPONS), 1)
+	ship.start_fire(int(Ship.Station.ENGINES))
+	combat.advance(30.0)
+	assert_false(ship.has_fire(int(Ship.Station.ENGINES)),
+		"the fire must be dealt with, because it keeps hurting the ship while it burns")
+	assert_true(combat.has_event(ShipCombat.EventKind.FIRE_OUT),
+		"and putting it out must be reported")
+
+
+func test_repair_cannot_exceed_the_hardware() -> void:
+	var parts := _damage_control_fixture(11, 2)
+	var combat: ShipCombat = parts[0]
+	var ship: Ship = parts[1]
+	ship.damage_system(int(Ship.Station.ENGINES), 1)
+	combat.advance(120.0)
+	for station in Ship.STATIONS:
+		assert_eq(ship.damage_in(station), 0,
+			"a long enough repair must clear the damage on %s" % Ship.station_label(station))
+		assert_true(ship.effective_power(station) <= ship.power_in(station),
+			"but must never give %s more working bars than were ever requested" % Ship.station_label(station))
+
+
+# --- redundant orders must be free ---------------------------------------------
+
+func test_a_no_op_order_costs_no_randomness() -> void:
+	# THE BUG THIS EXISTS FOR, found by an adversarial audit. `set_power`,
+	# `set_target` and `begin_escape` each rolled `Care.obeys` BEFORE checking
+	# whether the order actually changed anything, so asking for the state a system
+	# was already in still consumed an RNG draw. Measured at exactly one leaked
+	# draw per redundant order.
+	#
+	# Why it matters far more than it sounds: VoyageState shares ONE MpRng between
+	# combat, Care and SectorMap.generate. So the layout of the next sector
+	# depended on how many times the player re-clicked a power slider. Same class
+	# of bug as the one tests/unit/test_core_purity.gd was written for, arriving
+	# through a different door — there a read-only predicate rolled, here a write
+	# that changes nothing rolls.
+	for redundant_calls in [0, 1, 7]:
+		var combat := _combat(20250728)
+		var pair := ShipCombat.make_enemy(1, rng, rules)
+		combat.begin(Ship.make_starter(), _starter_crew(true), pair[0] as Ship, pair[1] as Crew, 1)
+		combat.advance(2.0)
+
+		# A crew at friendship 0 would refuse and log, which is a real event; these
+		# are befriended, so every roll below would silently succeed and be
+		# invisible except in the stream position.
+		var settled_power := combat.player.ship.power_in(int(Ship.Station.WEAPONS))
+		var settled_target := combat.player.target
+		var before_state := rng.state()
+		for _i in redundant_calls:
+			combat.set_power(int(Ship.Station.WEAPONS), settled_power)
+			combat.set_target(settled_target)
+		assert_eq(rng.state(), before_state,
+			"%d redundant order pair(s) moved the RNG — a re-click must be free, or the next sector's map depends on the player's fidgeting" % redundant_calls)
+
+
+func test_a_real_order_still_costs_an_obedience_roll() -> void:
+	# The other half: the fix must not have made obedience free altogether. An
+	# order that genuinely changes something must still be refusable, because
+	# disobedience_enabled is FAITHFUL (design §10).
+	var refusals := 0
+	for seed_value in SEEDS:
+		var combat := _combat(seed_value)
+		var pair := ShipCombat.make_enemy(1, rng, rules)
+		# friendship 0: the crew does not trust the player at all.
+		combat.begin(Ship.make_starter(), _starter_crew(false), pair[0] as Ship, pair[1] as Crew, 1)
+		# A genuine change: the starter runs Weapons on two bars.
+		combat.set_power(int(Ship.Station.SHIELDS), 0)
+		combat.set_power(int(Ship.Station.WEAPONS), Ship.SYSTEM_BARS_MAX)
+		refusals += _count(combat, ShipCombat.EventKind.DISOBEYED)
+	assert_true(refusals > 0,
+		"an unbefriended crew must still refuse real orders — skipping the roll for no-ops must not skip it for everything (%d refusals over %d seeds)" % [refusals, SEEDS.size()])
+
+
+# --- paying out exactly once ---------------------------------------------------
+
+func test_apply_rewards_is_idempotent() -> void:
+	# Found by audit. There was no guard, so two calls paid twice — and a UI that
+	# credits on `combat_finished` AND again on entering the salvage screen (or a
+	# player who backs out and re-enters it) would mint scrap, fuel and missiles for
+	# free.
+	var combat := _duck(11, 0, 6)
+	var economy := Economy.new(rules)
+	var ship := Ship.make_starter()
+	var result := combat.simulate()
+	assert_eq(result.outcome, ShipCombat.Outcome.PLAYER_WON,
+		"fixture check: only a win pays, so this fight has to be won")
+	assert_true(result.scrap_reward > 0, "fixture check: the win must carry salvage")
+
+	var scrap_before := economy.scrap
+	var fuel_before := ship.fuel
+	var missiles_before := ship.missiles
+	combat.apply_rewards(economy, ship)
+	var scrap_once := economy.scrap
+	var fuel_once := ship.fuel
+	var missiles_once := ship.missiles
+	assert_eq(scrap_once, scrap_before + result.scrap_reward, "the first call must pay the salvage")
+
+	for _i in 5:
+		combat.apply_rewards(economy, ship)
+	assert_eq(economy.scrap, scrap_once, "and no later call may pay it again")
+	assert_eq(ship.fuel, fuel_once, "nor hand out the fuel twice")
+	assert_eq(ship.missiles, missiles_once, "nor the missiles")
+	assert_true(ship.fuel >= fuel_before and ship.missiles >= missiles_before,
+		"and the stores must never go backwards")
+
+
+func test_escaping_logs_an_escape() -> void:
+	# EventKind.ESCAPED was declared and never logged, leaving a UI with no single
+	# event meaning "somebody left the fight".
+	var combat := _combat(11)
+	var crew := _ace_crew()
+	var pair := ShipCombat.make_enemy(1, rng, rules)
+	combat.begin(_ship({Ship.Station.ENGINES: 4}), crew, pair[0] as Ship, pair[1] as Crew, 1)
+	combat.begin_escape()
+	var result := combat.simulate()
+	assert_eq(result.outcome, ShipCombat.Outcome.PLAYER_ESCAPED,
+		"a charged jump drive with engines at full power must get the ship out")
+	assert_true(combat.has_event(ShipCombat.EventKind.ESCAPED),
+		"and the escape itself must be logged, not just inferred from the outcome")

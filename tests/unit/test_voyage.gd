@@ -976,3 +976,75 @@ func test_different_seeds_produce_different_voyages() -> void:
 		assert_not_has(charts, key,
 			"seed %d generated a chart identical to an earlier seed's, so the seed sweep is not actually sweeping anything" % seed_value)
 		charts.append(key)
+
+
+# --- lingering at a beacon -----------------------------------------------------
+#
+# `spend_time` is the hook that will make the threat mean something once beacons
+# have content (phase 5). Tested now so the mechanism is known-good before
+# anything depends on it, and so the currently-toothless threat is documented by a
+# passing test rather than by a comment nobody reads.
+
+
+func test_spending_time_at_a_beacon_lets_the_threat_close() -> void:
+	# The player does not move; the threat does. This is the only way the gap can
+	# shrink, which is why OVERTAKEN is unreachable until beacons cost time.
+	var column_before := voyage.current_column()
+	var gap_before := voyage.threat_distance()
+	voyage.spend_time(1)
+	assert_eq(voyage.current_column(), column_before,
+		"spending time must not move the ship — that is what makes it different from a jump")
+	assert_eq(voyage.threat_distance(), gap_before - 1,
+		"but the threat must gain exactly one column, closing the gap")
+	assert_eq(voyage.jumps_taken, 0, "and it must not count as a jump")
+
+
+func test_spending_enough_time_gets_you_overtaken() -> void:
+	# The end condition the audit found to be unreachable through legal play. It
+	# must at least be reachable through this hook, or the whole EndReason is dead
+	# code waiting for content that will never trigger it.
+	var guard := 0
+	while not voyage.threat_at_player() and guard < WALK_GUARD:
+		voyage.spend_time(1)
+		guard += 1
+	assert_true(voyage.threat_at_player(),
+		"loitering must eventually let the threat reach the ship, or the threat is decoration")
+	assert_eq(voyage.check_end(ship, crew), Voyage.EndReason.OVERTAKEN,
+		"and being caught must be reported as OVERTAKEN")
+
+
+func test_spending_no_time_or_negative_time_does_nothing() -> void:
+	var before := voyage.threat_column
+	voyage.spend_time(0)
+	voyage.spend_time(-5)
+	assert_eq(voyage.threat_column, before,
+		"a zero or negative loiter must be a no-op rather than moving the threat backwards")
+
+
+func test_a_finished_voyage_does_not_let_the_threat_keep_moving() -> void:
+	voyage.end(Voyage.EndReason.HULL_LOST)
+	var before := voyage.threat_column
+	voyage.spend_time(3)
+	assert_eq(voyage.threat_column, before,
+		"nothing may advance after the voyage is over, or a dead run keeps simulating")
+
+
+func test_the_threat_never_closes_on_a_player_who_only_ever_jumps() -> void:
+	# DOCUMENTS A KNOWN GAP rather than a desired behaviour, and will fail the day
+	# it is fixed — which is the point. Every link advances exactly one column, so
+	# the player and the threat move at identical speed and the gap cannot shrink.
+	# Confirmed at a minimum gap of 2 over full voyages.
+	#
+	# When phase 5 makes beacons cost time via `spend_time`, this test SHOULD go
+	# red. Rewrite it then to assert the pressure exists; do not simply delete it.
+	var minimum := 999
+	var jumps := 0
+	while not voyage.at_boss() and jumps < WALK_GUARD:
+		var choices: Array[int] = voyage.options()
+		if choices.is_empty():
+			break
+		voyage.jump_to(int(choices[0]), ship)
+		jumps += 1
+		minimum = mini(minimum, voyage.threat_distance())
+	assert_true(minimum > 0,
+		"a player who only jumps can never be caught (minimum gap %d) — the threat has no teeth until stopping at a beacon costs time" % minimum)

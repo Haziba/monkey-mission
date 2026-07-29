@@ -69,6 +69,26 @@ const SCRAP_REWARD_PER_SECTOR := 9
 const FUEL_REWARD_CHANCE := 0.55
 const MISSILE_REWARD_CHANCE := 0.35
 
+## Damage control, done by crew who are NOT at a station.
+##
+## THE PROBLEM THIS SOLVES: without repair, an engine hit is unrecoverable.
+## `Ship.evasion` and `Ship.jump_charge_rate` both return 0.0 with engines
+## offline, so a ship whose engines are shot out can neither dodge nor run, and the
+## rest of the fight is a formality. FTL's answer is crew repair, and we already
+## have the mechanism — `Crew.floaters()` is the unassigned crew.
+##
+## That makes it a real decision rather than a freebie. A voyage starts with 4 crew
+## for 5 stations and NO floaters, so damage control costs you a manned station:
+## pull the pilot off the helm to fix the engines, and lose your evasion while they
+## work. Exactly the trade FTL asks you to make.
+##
+## DIVERGENCE: [X], all three. A bar back every ~8s and a fire out in ~4s at
+## reference STRENGTH, so repair is meaningful but never outruns a sustained
+## barrage.
+const REPAIR_BARS_PER_SECOND := 0.12
+const FIRE_FIGHT_PER_SECOND := 0.25
+const SEAL_BREACH_PER_SECOND := 0.18
+
 ## The enemy AI retargets this often, in seconds. Fixed rather than random so a
 ## replay is identical.
 const ENEMY_RETARGET_SECONDS := 6.0
@@ -98,6 +118,9 @@ enum EventKind {
 	PLAYER_DESTROYED,
 	ESCAPED,
 	COMBAT_END,
+	# APPENDED, so nothing above is renumbered — see MISSION-ARCHITECTURE.md §0.
+	SYSTEM_REPAIRED,
+	FIRE_OUT,
 }
 
 
@@ -132,8 +155,19 @@ class Combatant extends RefCounted:
 class CombatEvent extends RefCounted:
 	var kind: EventKind = EventKind.COMBAT_START
 	var elapsed: float = 0.0
-	## True when the PLAYER caused it. A shot the enemy fired at you is
-	## `by_player == false`, and the hull damage it does is also false.
+	## WHOSE SIDE THIS EVENT IS ABOUT — and read the next sentence, because the
+	## name oversells it.
+	##
+	## For CAUSE events (SHOT_FIRED, WEAPON_CHARGED, POWER_REROUTED, TARGET_CHANGED,
+	## DISOBEYED, ENEMY_DESTROYED) it is true when the PLAYER did it. For SUBJECT
+	## events (HULL_DAMAGED, SHIELD_ABSORBED, SHOT_EVADED, SYSTEM_DAMAGED,
+	## FIRE_STARTED, BREACH_OPENED, CREW_HURT) it is true when it happened TO the
+	## player, i.e. the opposite side from whoever caused it.
+	##
+	## So a HUD must not colour uniformly by this flag: damage YOU deal arrives
+	## flagged `false`. That is deliberate — a damage event is about the ship taking
+	## it — but it is a trap, and it is pinned by
+	## `test_hull_damage_is_attributed_to_the_ship_it_landed_on`.
 	var by_player: bool = false
 	var station: int = -1
 	var amount: int = 0
@@ -203,7 +237,7 @@ func begin(
 	_all_events = []
 	_new_events = []
 	_player_hull_at_start = player_ship.hull if player_ship != null else 0
-	_log(EventKind.COMBAT_START, true, -1, 0, "AN ENEMY SHIP DROPS OUT OF FTL.")
+	_log(EventKind.COMBAT_START, true, -1, 0, "AN ENEMY SHIP DROPS OUT OF FTL.", false)
 
 
 func _make_combatant(ship: Ship, crew: Crew, is_player: bool) -> Combatant:
@@ -229,16 +263,32 @@ func _make_combatant(ship: Ship, crew: Crew, is_player: bool) -> Combatant:
 ## `MatchResolver.advance`'s contract.
 ##
 ## The UI calls this from `_process`; tests call it with big deltas.
+## Returns ONLY the events these ticks produced, duplicated so a caller holding
+## the batch cannot have later events land in it. Exactly `MatchResolver.advance`'s
+## contract.
+##
+## Orders are deliberately NOT in here — see `_log` for why, and for what a HUD has
+## to do instead.
 func advance(delta: float) -> Array[CombatEvent]:
-	_new_events = []
-	if _finished or delta <= 0.0 or player == null or enemy == null:
+	if player == null or enemy == null:
+		_new_events = []
 		return [] as Array[CombatEvent]
+	if _finished or delta <= 0.0:
+		# Still hand back anything an order logged since the last call — a refused
+		# order matters even on a tick that does not advance the clock.
+		return _drain()
 
 	_tick_pool += delta
 	while _tick_pool >= TICK_SECONDS and not _finished:
 		_tick_pool -= TICK_SECONDS
 		_tick(TICK_SECONDS)
-	return _new_events.duplicate()
+	return _drain()
+
+
+func _drain() -> Array[CombatEvent]:
+	var batch := _new_events.duplicate()
+	_new_events = []
+	return batch
 
 
 func _tick(delta: float) -> void:
@@ -249,6 +299,10 @@ func _tick(delta: float) -> void:
 	_tick_side(player, enemy, delta)
 	if not _finished:
 		_tick_side(enemy, player, delta)
+	if not _finished:
+		_tick_repairs(player, delta)
+	if not _finished:
+		_tick_repairs(enemy, delta)
 	if not _finished:
 		_tick_hazards(player, delta)
 	if not _finished:
@@ -318,6 +372,10 @@ func _charge_jump(side: Combatant, delta: float) -> void:
 	if side.jump_charge >= 1.0:
 		_log(EventKind.JUMP_CHARGED, side.is_player, Ship.Station.ENGINES, 0,
 			"%s JUMP DRIVE IS READY." % side.name_text())
+		# ESCAPED was declared in EventKind and never logged, which left a UI with
+		# no single event meaning "somebody left the fight".
+		_log(EventKind.ESCAPED, side.is_player, Ship.Station.ENGINES, 0,
+			"%s JUMPS OUT." % side.name_text())
 		if side.is_player:
 			_finish(Outcome.PLAYER_ESCAPED, "YOU JUMP CLEAR.")
 		else:
@@ -422,6 +480,107 @@ func _hurt_station_crew(side: Combatant, station: int, amount: int) -> void:
 
 # --- hazards -----------------------------------------------------------------
 
+## Damage control. Every FLOATER — living, available, and not at a station — works
+## on one job per tick, in a fixed priority order so a replay is identical:
+## fires first (they keep doing damage), then breaches, then the worst-damaged
+## system.
+##
+## Rate scales with the monkey's STRENGTH, faithfully: STRENGTH is the physical
+## stat and the health bar (dossier §3), so the toughest monkey is also the best
+## with a fire extinguisher. An unbefriended or paralysed floater does nothing —
+## `Crew.is_available` carries both faithful rules, so an overfed monkey cannot be
+## press-ganged into damage control either.
+func _tick_repairs(side: Combatant, delta: float) -> void:
+	if side.crew == null or side.ship == null:
+		return
+	for member in side.crew.floaters():
+		if not side.crew.is_available(member):
+			continue
+		var effort := _labour_rate(member) * delta
+		if effort <= 0.0:
+			continue
+		if _work_on_fire(side, member, effort):
+			continue
+		if _work_on_breach(side, member, effort):
+			continue
+		_work_on_damage(side, member, effort)
+
+
+## How fast this monkey works, as a multiple of a reference-STRENGTH monkey.
+func _labour_rate(member: Crew.Member) -> float:
+	if member == null or member.monkey == null:
+		return 0.0
+	var strength := float(member.monkey.get_stat(Monkey.Stat.STRENGTH))
+	return maxf(0.0, strength / Crew.REFERENCE_STAT)
+
+
+var _repair_pool: Dictionary = {}
+
+
+## Accumulate sub-1 progress, because a 0.12/second repair cannot show up on a
+## 0.25s tick otherwise.
+func _bank(key: String, amount: float, threshold: float) -> bool:
+	var pool := float(_repair_pool.get(key, 0.0)) + amount
+	if pool >= threshold:
+		_repair_pool[key] = pool - threshold
+		return true
+	_repair_pool[key] = pool
+	return false
+
+
+func _side_key(side: Combatant) -> String:
+	return "p" if side.is_player else "e"
+
+
+func _work_on_fire(side: Combatant, member: Crew.Member, effort: float) -> bool:
+	for station in Ship.STATIONS:
+		if not side.ship.has_fire(station):
+			continue
+		var key := "fire:%s:%d" % [_side_key(side), station]
+		if _bank(key, effort * FIRE_FIGHT_PER_SECOND, 1.0):
+			if side.ship.extinguish(station):
+				_log(EventKind.FIRE_OUT, side.is_player, station, 0,
+					"%s PUTS OUT THE FIRE IN %s." % [
+						member.display_name(), Ship.station_label(station)])
+		return true
+	return false
+
+
+func _work_on_breach(side: Combatant, member: Crew.Member, effort: float) -> bool:
+	for station in Ship.STATIONS:
+		if not side.ship.has_breach(station):
+			continue
+		var key := "breach:%s:%d" % [_side_key(side), station]
+		if _bank(key, effort * SEAL_BREACH_PER_SECOND, 1.0):
+			if side.ship.seal(station):
+				_log(EventKind.SYSTEM_REPAIRED, side.is_player, station, 0,
+					"%s SEALS THE BREACH IN %s." % [
+						member.display_name(), Ship.station_label(station)])
+		return true
+	return false
+
+
+func _work_on_damage(side: Combatant, member: Crew.Member, effort: float) -> void:
+	var worst := -1
+	var worst_bars := 0
+	for station in Ship.STATIONS:
+		var bars := side.ship.damage_in(station)
+		if bars > worst_bars:
+			worst_bars = bars
+			worst = station
+	if worst < 0:
+		return
+	var key := "repair:%s:%d" % [_side_key(side), worst]
+	if not _bank(key, effort * REPAIR_BARS_PER_SECOND, 1.0):
+		return
+	if side.ship.repair_system(worst, 1) > 0:
+		_log(EventKind.SYSTEM_REPAIRED, side.is_player, worst, 1,
+			"%s PATCHES UP %s." % [member.display_name(), Ship.station_label(worst)])
+		# A repaired shield system can hold its layers again, but must not be
+		# handed them back for free — it recharges them like anything else.
+		_clamp_shields(side)
+
+
 func _tick_hazards(side: Combatant, delta: float) -> void:
 	if side.ship == null:
 		return
@@ -475,6 +634,11 @@ func _hurt_over_time(side: Combatant, station: int, amount: float, source: Strin
 # --- the enemy -----------------------------------------------------------------
 
 func _tick_enemy_ai(delta: float) -> void:
+	# `begin`/`_make_combatant` tolerate a null Ship (some tests fight crewless or
+	# shipless sides), so guard rather than dereference — a runtime error raised in
+	# here would unwind the tick and still be reported as a PASS.
+	if enemy == null or enemy.ship == null or player == null or player.ship == null:
+		return
 	_enemy_retarget_pool += delta
 	if _enemy_retarget_pool >= ENEMY_RETARGET_SECONDS:
 		_enemy_retarget_pool -= ENEMY_RETARGET_SECONDS
@@ -511,16 +675,34 @@ func set_power(station: int, bars: int) -> bool:
 		return false
 	if not Ship.STATIONS.has(station):
 		return false
+
+	# A NO-OP ORDER MUST NOT COST AN OBEDIENCE ROLL. Checked before `_order_obeyed`
+	# deliberately, and this ordering is load-bearing.
+	#
+	# THE BUG THIS FIXES: the obedience roll came first, so asking for the
+	# allocation a system already had still consumed an RNG draw. `VoyageState`
+	# shares one `MpRng` between combat, `Care` and `SectorMap.generate`, which
+	# meant the layout of the NEXT sector depended on how many times the player
+	# re-clicked a power slider. Measured at exactly one leaked draw per redundant
+	# order: 0 no-op pairs gave 45 total draws, 7 pairs gave 59.
+	#
+	# This is the same class of bug as the one tests/unit/test_core_purity.gd was
+	# written for, arriving through a different door: there it was a read-only
+	# predicate that rolled, here it is a write that changes nothing but rolls.
+	var before := player.ship.power_in(station)
+	var target := clampi(bars, 0, player.ship.max_bars(station))
+	if target == before:
+		return target == bars
+
 	if not _order_obeyed(station):
 		return false
-	var before := player.ship.power_in(station)
 	var reached := player.ship.set_power(station, bars)
 	var after := player.ship.power_in(station)
 	if after != before:
 		_log(EventKind.POWER_REROUTED, true, station, after,
-			"%s POWER SET TO %d." % [Ship.station_label(station), after])
+			"%s POWER SET TO %d." % [Ship.station_label(station), after], false)
 		# Shields cannot hold more layers than the new allocation supports.
-		player.shield_layers = mini(player.shield_layers, player.ship.shield_layers_max())
+		_clamp_shields(player)
 	return reached
 
 
@@ -529,18 +711,25 @@ func set_target(station: int) -> void:
 		return
 	if not Ship.STATIONS.has(station):
 		return
-	if not _order_obeyed(Ship.Station.WEAPONS):
-		return
+	# Before the obedience roll, for the same reason as `set_power`: re-selecting
+	# the target already selected must be free, or the random stream depends on how
+	# many times the player tapped the same button.
 	if player.target == station:
+		return
+	if not _order_obeyed(Ship.Station.WEAPONS):
 		return
 	player.target = station
 	_log(EventKind.TARGET_CHANGED, true, station, 0,
-		"TARGETING THE ENEMY %s." % Ship.station_label(station))
+		"TARGETING THE ENEMY %s." % Ship.station_label(station), false)
 
 
 ## Start charging the jump drive to run away.
 func begin_escape() -> void:
 	if _finished or player == null:
+		return
+	# Already running: a second order is a no-op and must not roll. Same reasoning
+	# as `set_power`.
+	if player.escaping:
 		return
 	if not _order_obeyed(Ship.Station.ENGINES):
 		return
@@ -564,7 +753,7 @@ func _order_obeyed(station: int) -> bool:
 	if _care.obeys(member.monkey):
 		return true
 	_log(EventKind.DISOBEYED, true, station, 0,
-		"%s IGNORES YOU." % member.display_name())
+		"%s IGNORES YOU." % member.display_name(), false)
 	return false
 
 
@@ -633,9 +822,17 @@ func result() -> CombatResult:
 ## Pay the rewards into a voyage. Kept separate from `_finish` so a test can
 ## inspect a result without it having side effects, and so the UI decides when the
 ## salvage screen actually credits it.
+## Idempotent: the salvage is paid at most once, however many times this is
+## called. Without the guard, re-entering a salvage screen (or a UI that calls it
+## on both `combat_finished` and screen-enter) would credit the scrap, fuel and
+## missiles again — free money for a double tap.
+var _rewards_paid: bool = false
+
+
 func apply_rewards(economy: Economy, ship: Ship) -> void:
-	if _result == null:
+	if _result == null or _rewards_paid:
 		return
+	_rewards_paid = true
 	if economy != null and _result.scrap_reward > 0:
 		economy.earn_scrap(_result.scrap_reward)
 	if ship != null:
@@ -771,7 +968,22 @@ static func kind_label(kind: EventKind) -> String:
 	return String(EventKind.keys()[clampi(int(kind), 0, EventKind.keys().size() - 1)])
 
 
-func _log(kind: EventKind, by_player: bool, station: int, amount: int, text: String) -> CombatEvent:
+## `batch` controls whether this event joins the pending batch that the next
+## `advance()` hands back. ONE SOURCE OF TRUTH PER EVENT: anything logged OUTSIDE a
+## tick passes false, so a caller cannot receive it twice.
+##
+## That covers COMBAT_START (logged by `begin`) and every order — POWER_REROUTED,
+## TARGET_CHANGED, DISOBEYED — which are logged between frames by `set_power`,
+## `set_target` and `begin_escape`.
+##
+## THE TRAP, and it is a real one: `advance()` therefore never hands back a refused
+## order. A HUD that renders only `advance()`'s return value will show the player
+## nothing when a monkey ignores them. Orders must be read from the `event_logged`
+## signal or from `events()`. The alternative — batching them — would make a UI
+## that listens to BOTH sources double-print every line, which is worse. Pinned by
+## `test_advance_returns_only_the_events_from_that_call`.
+func _log(kind: EventKind, by_player: bool, station: int, amount: int, text: String,
+		batch: bool = true) -> CombatEvent:
 	var event := CombatEvent.new()
 	event.kind = kind
 	event.elapsed = elapsed
@@ -780,6 +992,7 @@ func _log(kind: EventKind, by_player: bool, station: int, amount: int, text: Str
 	event.amount = amount
 	event.text = text
 	_all_events.append(event)
-	_new_events.append(event)
+	if batch:
+		_new_events.append(event)
 	event_logged.emit(event)
 	return event
