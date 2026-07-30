@@ -472,6 +472,42 @@ is written to go red the moment it is done.
 
 ---
 
+## 9a. "The game seems the same?" — yes, and why
+
+You asked this, and it is the right question. **The game is byte-for-byte the same to play.** Nothing
+in `ui/` references a single one of the new systems, `Router` has no new screens, and it still boots
+to the boxing title screen. Verified, not assumed.
+
+That is what phases 1–4 *are*: your design doc puts the mutation's UI at **phase 8**, and phases 1–4
+are the contract, ship/crew, the voyage loop and ship combat — all `core/` plus tests. So the whole
+night's work is currently invisible unless you run the suite. My summary led with "all four phases
+landed", which reads like "the game is now Monkey Mission". It is not. That was my reporting error,
+not a gap in the work.
+
+**A voyage does run end to end, headless.** Fed crew, jumps burning fuel, procedural beacons, real
+fights, training at safe beacons, permadeath, and an ending. If you want to see it, the fastest thing
+is a throwaway `SceneTree` script — and it is worth doing, because:
+
+### Playing it once found a bug 800 tests had missed
+
+The very first end-to-end run showed **one** crewman befriended and the other three at friendship 0.
+`FoodDb.starting_inventory()` is four bananas, sized for the boxing game's *single* monkey. A voyage
+sails with four, each needing about two bananas, so the opening larder could win over exactly one of
+them — leaving one of five stations live and a ship that loses its first real fight through no fault
+of the player. Fixed by scaling the larder to the crew.
+
+**How it slipped past a green suite is the instructive part.** Two tests covered this exact area, and
+both were correct: one asserted the crew starts untrusting, the other that a fed crew works. But the
+second set `friendship` directly instead of spending food, so nothing joined "they need feeding" to
+"there is enough food to feed them". **The bug lived in the gap between two passing tests.**
+
+That is the second time in one night that a throwaway simulation beat the unit tests (the first being
+combat being wholly inert). I would make it a standing rule for this project: **every balance-bearing
+system gets a play-it-once probe, and none of them belong in the suite** — they are exploratory, not
+regression tests.
+
+---
+
 ## 10. Things I chose not to fix, and why
 
 So you can overrule me rather than discover them later. All are logged at the code, not just here.
