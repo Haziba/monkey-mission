@@ -65,9 +65,21 @@ static func new_voyage(
 	state.rng = p_rng if p_rng != null else MpRng.new(0)
 
 	state.economy = Economy.new(state.rules)
+	# Scaled by crew size, and this is not a nicety.
+	#
+	# `FoodDb.starting_inventory()` is 4 bananas — sized for the boxing game, which
+	# had exactly ONE monkey. A voyage sails with `Crew.VOYAGE_START_SIZE` of them,
+	# all unbefriended (dossier §5 [C]), and each needs roughly two bananas to cross
+	# `Monkey.FRIENDSHIP_TRAIN_MIN`. So the unscaled larder could befriend ONE
+	# crewman and left the other three refusing to work: four of five stations dead,
+	# and a ship that loses its first serious fight through no fault of the player.
+	#
+	# Found by playing a voyage end to end, not by a unit test — see
+	# docs/MORNING-REPORT.md §7.
 	var pantry := FoodDb.starting_inventory()
 	for food_id in pantry:
-		state.economy.add_food(String(food_id), int(pantry[food_id]))
+		state.economy.add_food(
+			String(food_id), int(pantry[food_id]) * Crew.VOYAGE_START_SIZE)
 
 	state.care = Care.new(state.rules, state.rng)
 	state.training = Training.new(state.rules, state.rng)

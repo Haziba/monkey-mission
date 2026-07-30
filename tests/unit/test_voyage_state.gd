@@ -351,3 +351,39 @@ func test_asking_whether_the_voyage_is_over_is_free() -> void:
 		state.has_flag("anything")
 	assert_eq(state.rng.state(), before,
 		"read-only voyage questions must not move the rng, or polling desyncs the run")
+
+
+func test_the_opening_larder_can_actually_befriend_the_whole_crew() -> void:
+	# THE BUG THIS EXISTS FOR, found by playing a voyage rather than by unit tests.
+	# FoodDb.starting_inventory() is sized for the boxing game's single monkey. A
+	# voyage sails with VOYAGE_START_SIZE unbefriended monkeys, so the unscaled
+	# larder could win over exactly ONE of them and left the rest refusing to work —
+	# four of five stations dead through no fault of the player.
+	#
+	# Asserted by actually doing it, because the arithmetic (feeds per monkey x
+	# monkeys) is exactly the thing that was got wrong the first time.
+	var state := _fresh()
+	var banana := FoodDb.get_food("banana")
+	assert_not_null(banana, "fixture: the documented befriender must exist")
+
+	for member in state.crew.members:
+		assert_false(member.monkey.is_befriended(), "every monkey must start untrusting")
+
+	# Feed each monkey until it will work, or until the larder is empty.
+	for member in state.crew.members:
+		var guard := 0
+		while not member.monkey.is_befriended() and guard < 12:
+			if state.economy.food_count("banana") <= 0:
+				break
+			state.care.feed(member.monkey, banana, state.economy)
+			guard += 1
+
+	for member in state.crew.members:
+		assert_true(member.monkey.is_befriended(),
+			"%s must be winnable over with the food a voyage actually ships with — the larder has to scale with the crew" % member.monkey.monkey_name)
+
+	# And the ship must then genuinely be alive at every manned post.
+	for station in Ship.STATIONS:
+		if state.crew.is_manned(station):
+			assert_true(state.crew.station_performance(station) > 0.0,
+				"%s must be working once its monkey has been fed" % Ship.station_label(station))
