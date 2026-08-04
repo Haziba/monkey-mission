@@ -137,9 +137,16 @@ func _apply_palette() -> void:
 ## letterbox. Sizing the logo off raw width would then inflate it into the menu
 ## below, so the art unit is capped at the portrait width and the wordmark stays
 ## centred in the extra space.
+## The ratio is written out rather than read from Palette.SCREEN_SIZE because
+## SCREEN_SIZE is landscape now and this screen's art is still authored for
+## portrait: capping at 2.18x the height would be no cap at all, and the
+## wordmark would grow to a third of the screen. Delete this constant when the
+## title screen itself is re-laid out for landscape.
+const PORTRAIT_RATIO := 1080.0 / 1920.0
+
+
 func _art_width() -> float:
-	var portrait := size.y * float(Palette.SCREEN_SIZE.x) / float(Palette.SCREEN_SIZE.y)
-	return minf(size.x, portrait)
+	return minf(size.x, size.y * PORTRAIT_RATIO)
 
 
 func _relayout() -> void:

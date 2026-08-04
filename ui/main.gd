@@ -5,7 +5,7 @@ extends Control
 ## stack and its own CanvasLayer. Nothing else belongs here.
 ##
 ## The one visual it owns is the backdrop that shows through in the letterbox
-## bars when the device aspect is taller or wider than 1080x1920 (the project is
+## bars when the device aspect is taller or wider than 1920x880 (the project is
 ## `canvas_items` stretch with `expand` aspect, so this is rarely visible — but
 ## a black flash on a notch cutout looks like a bug).
 
@@ -16,4 +16,4 @@ func _ready() -> void:
 	# Colour set here rather than baked into the .tscn so Palette stays the single
 	# source of truth for every fill in the game.
 	_backdrop.color = Palette.BG
-	Router.reset_to(Router.Screen.TITLE)
+	Router.reset_to(Router.Screen.SPLASH)

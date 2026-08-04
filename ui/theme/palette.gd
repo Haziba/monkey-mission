@@ -83,8 +83,10 @@ const LOC_STREET := Color("6b4c9a")        ## violet road, awnings, vending mach
 const LOC_SITUPS := Color("e8a0b8")        ## pink walls, red curtains
 const LOC_SHOP := Color("b5763f")          ## wooden pen railing, shopkeeper in red
 
-# --- layout constants (1080x1920 logical, portrait) ------------------------
-const SCREEN_SIZE := Vector2i(1080, 1920)
+# --- layout constants (1920x880 logical, landscape) ------------------------
+## Landscape, roughly 19.5:9 — a phone held sideways. Screens written before the
+## flip still lay themselves out for portrait and have not been swept yet.
+const SCREEN_SIZE := Vector2i(1920, 880)
 const MARGIN := 40
 const GUTTER := 24
 ## Minimum tap target. Everything interactive must be at least this tall.

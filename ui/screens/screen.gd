@@ -10,8 +10,8 @@ extends Control
 ##  * Never mutate a Monkey, an Economy or a Ladder directly.
 ##  * Take every colour from `Palette`. Placeholder shapes only: ColorRect,
 ##    Panel, Label, Line2D, draw_*. No image files.
-##  * Portrait 1080x1920 logical. Anything tappable is at least
-##    Palette.TOUCH_MIN tall.
+##  * Landscape 1920x880 logical (Palette.SCREEN_SIZE). Anything tappable is at
+##    least Palette.TOUCH_MIN tall.
 
 ## Params the Router was given when this screen was pushed.
 var enter_params: Dictionary = {}

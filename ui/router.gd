@@ -46,6 +46,8 @@ enum Screen {
 	## a real screen but had no enum entry, so nothing could route to it. Added
 	## at the END so no existing value is renumbered.
 	DAY_END,
+	## The Monkey Mission intro sequence — the app's first frame, ahead of TITLE.
+	SPLASH,
 }
 
 ## Reconciled by the Integration agent: several entries named a `*_screen.tscn`
@@ -77,6 +79,7 @@ const SCENE_PATHS: Dictionary = {
 	Screen.ROSTER: "res://ui/screens/roster_screen.tscn",
 	Screen.SETTINGS: "res://ui/screens/settings_screen.tscn",
 	Screen.DAY_END: "res://ui/screens/day_end.tscn",
+	Screen.SPLASH: "res://ui/screens/splash_screen.tscn",
 }
 
 const PLACEHOLDER_SCENE := "res://ui/screens/placeholder_screen.tscn"
