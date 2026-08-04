@@ -1,6 +1,7 @@
-[gd_scene load_steps=2 format=3]
+[gd_scene load_steps=3 format=3]
 
 [ext_resource type="Script" path="res://ui/main.gd" id="1_main"]
+[ext_resource type="Script" path="res://ui/debug_menu.gd" id="2_debug"]
 
 [node name="Main" type="Control"]
 layout_mode = 3
@@ -21,3 +22,8 @@ grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
 color = Color(0.10588235, 0.078431375, 0.1254902, 1)
+
+[node name="DebugMenu" type="CanvasLayer" parent="."]
+layer = 10
+script = ExtResource("2_debug")
+

@@ -1111,6 +1111,14 @@ missing, so the headless suite can still mount them.
 the placeholder. Nothing in the slice routes to the first three; `SETTINGS` is reachable from the
 title and lands on the placeholder, which has a working BACK.
 
+`ui/debug_menu.gd` is a CanvasLayer instanced by `ui/main.tscn` at `layer = 10`, above the Router's
+own screen layer. It draws a faint `DEBUG` button in the top-right of **every** screen; the panel
+behind it jumps straight to any `Router.Screen`, newest enum entry first. It builds its list from the
+enum, so a new screen appears in it for free. It `queue_free()`s itself when `OS.is_debug_build()` is
+false, so there is nothing to strip before an export. Screens that read the run on open are listed in
+`NEEDS_RUN` and get one seeded first; screens that need params to be worth opening are listed in
+`JUMP_PARAMS`.
+
 `ui/screens/home_screen.gd` gained two menu slots — `MenuSlot.BREEDING` and `MenuSlot.ROSTER` — plus
 the two buttons behind them in `home_screen.tscn`. Neither the dating shop nor the roster had any
 route into it before, which left breeding (dossier §8, the signature system) unreachable.
