@@ -705,7 +705,7 @@ func _unhandled_input(event: InputEvent) -> void:
 # --- the ring ----------------------------------------------------------------
 #
 # Placeholder shapes only: draw_rect / draw_circle / draw_line / draw_polygon.
-# No image files, no ripped sprites. The composition follows 145.png — crowd
+# Nothing ripped or traced from the original. The composition follows 145.png — crowd
 # band across the top, a lit apron behind, ring floor in front, a corner post at
 # each side, and the two fighters facing each other on the near rope.
 

@@ -9,8 +9,9 @@ extends GameScreen
 ## bordered text box across the bottom carrying an encouraging line
 ## ("TOMORROW I'LL ALSO WORK HARD."). That is the beat this screen keeps.
 ##
-## ART IS PLACEHOLDER SHAPES. The portraits are flat Panels, the sunburst is a
-## `draw_colored_polygon` fan. No image files.
+## ART IS STAND-IN ART (ARCHITECTURE §17). The portraits are flat Panels, the
+## sunburst is a `draw_colored_polygon` fan — drawn rather than generated because
+## it is cheaper here, not because images are forbidden.
 ##
 ## Layering: this screen reads `GameState` and nothing else. It computes no
 ## gains — it only reports numbers that core already produced.

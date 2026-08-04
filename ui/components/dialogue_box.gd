@@ -10,9 +10,9 @@ extends Control
 ## box is pinned to the bottom, and the speaker's name is printed in angle
 ## brackets — `<BILL>`.
 ##
-## ART IS PLACEHOLDER SHAPES. The portrait is a flat per-speaker fill with the
+## ART IS STAND-IN ART (ARCHITECTURE §17). The portrait is a flat per-speaker fill with the
 ## chunky checkerboard field the dossier calls a recurring UI motif (§10 [C])
-## and a large monogram. No image files.
+## and a large monogram — drawn, not generated, because a flat fill is enough here.
 ##
 ## Input: tap anywhere to advance; tapping while the text is still revealing
 ## completes the reveal instead of skipping the line.

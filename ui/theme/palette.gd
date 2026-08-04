@@ -1,9 +1,11 @@
 class_name Palette
 extends RefCounted
 
-## The placeholder colour palette. ART IS PLACEHOLDER SHAPES ONLY — ColorRect,
-## Panel, Label, Line2D and draw_* calls. No image files, no downloaded assets,
-## and absolutely no sprites ripped from the original.
+## The colour palette. ART IS STAND-IN ART — shapes drawn in code and generated
+## raster assets both, good enough to give an impression of the finished game and
+## built to be replaced by an artist later (docs/ARCHITECTURE.md §17). The one
+## part of the old "placeholder shapes only" rule that still stands is the legal
+## one: absolutely nothing traced, ripped or regenerated from the original.
 ##
 ## The hues follow the original's register as the dossier describes it (§10 [C]):
 ## "bright and high-chroma", with a chunky checkerboard field as a recurring UI

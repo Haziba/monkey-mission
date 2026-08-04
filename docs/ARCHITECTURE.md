@@ -948,10 +948,27 @@ be generated at runtime. Every method is a safe no-op today: `Sfx.click()`, `Sfx
 
 ### Palette — `ui/theme/palette.gd`, `class_name Palette`
 
-**Art is placeholder shapes only: ColorRect, Panel, Label, Line2D, `draw_*`. No image files, no
-downloaded assets, no sprites ripped from the original.** Layout follows the real game (see
-`docs/reference/`); the fills are flat colours. **Take every colour from here — never hardcode a
-`Color` in a screen script.**
+**Art is stand-in art, not final art.** Everything visual here — shapes drawn in `_draw`, generated
+raster assets, all of it — is a halfway house. Its job is to give an honest impression of the
+finished game while the game is being built, and it is expected to be handed to an artist and
+replaced. Three rules follow from that, and they replace the old "placeholder shapes only, no image
+files" rule (lifted by Harry, 4 August 2026):
+
+1. **Good enough to sell the idea, and no further.** A screen must read correctly at a glance and
+   never be confusing *because* of its art. Polish beyond that is work a professional will throw
+   away — don't do it.
+2. **Always swappable.** Raster assets live in `assets/`, are referenced in one place per screen,
+   and never have logic hanging off their pixels. Replacing a file must never mean a refactor.
+   Colours still come from `Palette` — a generated image may sit on a screen, but nothing hardcodes
+   a `Color` next to it.
+3. **Nothing from the original game, ever.** No traced, ripped or re-drawn sprites, and nothing in
+   `docs/reference/` is fed to an image generator as input — those files are the original's
+   copyrighted screenshots, held as *layout* reference for humans only. This half of the old rule is
+   legal, not practical, and it does not move.
+
+Generated assets record their prompt (see `assets/placeholder/README.md`) so the set can be
+regenerated or extended without guessing. Layout follows the real game (see `docs/reference/`).
+**Take every colour from here — never hardcode a `Color` in a screen script.**
 
 ```
 base      BG INK INK_LIGHT PAPER PAPER_EDGE
@@ -1070,8 +1087,16 @@ private `_autosave()`. It is best-effort and never reports upward.
 
 ```gdscript
 # ui/router.gd
-enum Screen { ..., DAY_END }          # APPENDED, nothing renumbered
+enum Screen { ..., DAY_END }                                   # APPENDED, nothing renumbered
+enum Screen { ..., PROLOGUE_FORAGE, PROLOGUE_TRAP }            # APPENDED, nothing renumbered
 ```
+
+The two prologue screens are the playable opening (the drone stocking a larder, then trapping its
+first crew) and sit **on the NEW GAME route**: `TITLE -> PROLOGUE_FORAGE -> PROLOGUE_TRAP -> INTRO`.
+Each forwards the params the title handed it (`new_game`, `protagonist`) so it can be dropped in or
+out of the chain without the screens either side learning anything. They are the first screens to
+use raster art (`assets/placeholder/prologue/`), and each degrades to flat shapes when a texture is
+missing, so the headless suite can still mount them.
 
 `SCENE_PATHS` was repointed where a declared filename never existed but the screen did:
 

@@ -9,10 +9,10 @@ extends GameScreen
 ## starburst behind it, and a checkerboard band across the footer — the
 ## "chunky checkerboard field" the dossier calls a recurring UI motif.
 ##
-## ART IS PLACEHOLDER SHAPES. The wordmark is two Labels with a thick font
+## ART IS STAND-IN ART (ARCHITECTURE §17). The wordmark is two Labels with a thick font
 ## outline; the blob, glove, starburst and checkerboard are draw_circle /
 ## draw_rect / draw_colored_polygon calls in `_draw`. Nothing here is traced
-## from the original and there are no image files.
+## from the original, which is the half of the old art rule that still stands.
 ##
 ## Everything it does to the run goes through the GameState autoload:
 ##   NEW GAME  -> GameState.new_run() -> GameState.save_run() -> Router
@@ -305,7 +305,10 @@ func _start_new_run() -> void:
 	# before the player had taken a single action, so a mistaken tap destroyed it
 	# with no confirmation. The run is committed at the first real milestone: a
 	# day boundary, a finished match, or a breeding.
-	Router.reset_to(Router.Screen.INTRO, {
+	# NEW GAME opens on the playable prologue — the drone stocking a larder and
+	# trapping its first crew — which hands the same params on to the INTRO when
+	# it is done. Nothing else about the new-run route changed.
+	Router.reset_to(Router.Screen.PROLOGUE_FORAGE, {
 		"new_game": true,
 		"protagonist": int(DEFAULT_PROTAGONIST),
 	})

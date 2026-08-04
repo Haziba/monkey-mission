@@ -8,8 +8,9 @@ extends Control
 ##  * Read state from the `GameState` autoload only. Never construct a Care,
 ##    Training, MatchResolver or Breeding yourself.
 ##  * Never mutate a Monkey, an Economy or a Ladder directly.
-##  * Take every colour from `Palette`. Placeholder shapes only: ColorRect,
-##    Panel, Label, Line2D, draw_*. No image files.
+##  * Take every colour from `Palette`. Art is stand-in art (ARCHITECTURE §17):
+##    drawn shapes and generated images are both fine, kept swappable, and
+##    nothing is ever traced or ripped from the original.
 ##  * Landscape 1920x880 logical (Palette.SCREEN_SIZE). Anything tappable is at
 ##    least Palette.TOUCH_MIN tall.
 

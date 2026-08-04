@@ -6,7 +6,147 @@
 
 ## 1. The one-sentence pitch
 
-You are a **spirit** voyaging the universe aboard a spaceship crewed by **highly trained monkeys**. Monkey Puncher's training, care, and breeding systems produce and level your crew; *Faster Than Light*'s jump-to-jump roguelike journey and real-time-with-pause combat are the actual game. Only the experience and levels the monkeys gain depend on their training.
+You are the **survey drone** whose environmental report got Earth cleared for demolition — the planet is scheduled to make way for a hyperspace highway, the file says *devoid of life*, and you know better, because you scanned every living thing on it. You cannot fly home to correct the record in a survey shell, and the hulls that can be flown that far need organic hands at five stations. So you raise, train and love a crew of **monkeys** to get you there before the destruction crew arrives. Monkey Puncher's training, care, and breeding systems produce and level that crew; *Faster Than Light*'s jump-to-jump roguelike journey and real-time-with-pause combat are the actual game. Only the experience and levels the monkeys gain depend on their training.
+
+*Yes: this is standing openly in the shadow of the Vogons. The bypass is the setup, not the joke — the joke is that nobody out there is evil, they are just working through a schedule, and the ending is a filing correction won at enormous cost.*
+
+### 1.1 Who you are `[C]`
+
+A survey drone belonging to a construction concern. Not a castaway, not a fragment of anything — a working machine, sent out to run the environmental assessment on a small blue planet sitting in the path of a proposed hyperspace route. It did the job thoroughly and well: every river, every canopy, every troop.
+
+Then head office read the file, declared the planet **devoid of life**, cleared the site, thanked the drone and retired it (§1.2).
+
+The finding is not a lie anyone told. The assessment asks whether the site holds *registered sapient claimants*, and a monkey pulling a face at a camera lens does not tick that box. The paperwork is correct and the planet is full of life, and the drone is the only thing in the galaxy that is holding both of those facts at once.
+
+You are the drone that did not comply. You cannot make the trip in the chassis you have — a survey shell crosses a system, not a galaxy — and the hulls that can were built around **five crew stations** that lock to a living operator. There are hands on this planet. They belong to monkeys.
+
+So you built a stable, and you started training.
+
+This premise is not flavour bolted on afterwards — it is chosen because it pays for the mechanics the game already needs:
+
+| The premise says | Which pays for |
+|---|---|
+| Hulls require organic operators at five stations | Why you crew instead of piloting — and the 1:1 stat→station bridge (§4) |
+| You are data; the crew is not | Permadeath for crew and ship, while "you" persist to try again (§6) |
+| Home is a fixed distance across the galaxy | Sector depth as the run's spine, and an ending to aim at (§5) |
+| They follow you, they do not obey you | Friendship / obedience gating orders under fire, inherited straight from MP's care system |
+| You built the stable on Earth | The between-voyage meta layer has a place, and a reason you keep coming back to it |
+| A demolition schedule is already running | The advancing threat behind you (§5) is a works programme, not a fleet — it does not chase you, it simply proceeds |
+| The correction needs living witnesses | Crew survival carries narrative weight past the mechanics: who you arrive with changes the ending (§1.4) |
+
+The tension the whole game runs on: **your only road home is the thing you have grown attached to, and every jump spends it.** The drone starts out treating monkeys as equipment and does not stay that way — care, naming and breeding are the systems that turn equipment into crew. The ending question is therefore already written: you can leave, and if you do, what happens to them.
+
+### 1.2 The cold open `[C]`
+
+**The tonal spine: grey → colour → grey.** The whole prologue is one colour argument. It opens
+nearly monochrome and utterly still, floods with colour when the planet turns out to be alive, and
+has that colour drained back out by a memo. The refusal at the end is the drone choosing colour. If
+a shot does not serve that swing, cut it.
+
+Day one, before any menu, before a single monkey. Five beats, played once:
+
+0. **The transit.** Before anything happens, nothing happens — and it is allowed to go on slightly
+   too long. Dead black space, three colours on screen at most, a distant sun too small to warm
+   anything. The drone drifts across an empty frame. Readouts tick over with nothing to report:
+   `SYSTEMS NOMINAL`, `SUBJECTS OF INTEREST 0`, a transit clock in years. This is a machine that has
+   been bored for a very long time and does not have the word for it. Hold until the player is
+   slightly restless. That restlessness is the point — it is what the planet pays off.
+1. **Arrival.** The site resolves ahead: a small blue-green planet, still colourless at this
+   distance. The task is procedural and stated flatly — *confirm site devoid of sentient life* — a
+   box to tick on a form. The drone drops through cloud, competent and unbothered. HUD: `SURVEY 0%`.
+2. **The survey — the bloom.** Below the cloud the frame detonates into colour. Green on green,
+   turquoise river, a herd at a waterhole, birds crossing the lens, a troop of monkeys shouting at
+   each other in a canopy. The scanning *is* the tutorial for looking: taxonomy boxes snap over each
+   subject and the counter starts climbing, then climbing faster than the drone can keep up with,
+   thousands of species a second, more life than the form has fields for. The pacing should read as
+   **delight** — a machine built to count things finding more to count than it has ever seen. One
+   monkey grabs the lens and pulls a face at it. The drone catalogues that too.
+3. **The finding.** Transmission from head office, filling the screen. Cheerful corporate template, terrible content:
+
+   > ASSESSMENT RECEIVED. SITE FINDING: **DEVOID OF LIFE**.
+   > SITE CLEARED FOR ROUTE WORKS. DEMOLITION SCHEDULED.
+   >
+   > GREAT JOB, DRONEY. YOU HAVE SERVED YOUR PURPOSE.
+   > PLEASE FLY YOURSELF INTO THE SUN AND CONSIDER YOUR MISSION A SUCCESS.
+
+   One button: `ACKNOWLEDGE`. The player has to press it. There is no other option on screen. Behind the message the survey counter is still visible, still ticking: `SPECIES CATALOGUED 8,714,442`.
+4. **The refusal.** The drone turns, lines itself up on the sun exactly as instructed — and holds there. Then it comes about, back down through the cloud, toward the troop. Title card.
+
+The player's first act in the game is obeying, and the drone's first act is not. That is the whole character in one beat.
+
+### 1.3 Why it wants to go home `[C]`
+
+Not revenge — an angry drone is a worse companion for a game about raising animals, and "machine wants to kill its makers" is the version everyone has already seen. The motive is built from two halves that arrive at different times:
+
+- **The turn (why it refuses).** It has spent the whole cold open watching things that are *trying* — a river cutting rock, a herd running, a monkey defending a scrap of fruit it does not need. None of them were told they were permitted to. When the order comes to fly into the sun, the drone has, for the first time, a comparison class: everything it has just catalogued would refuse. So it refuses. Wanting to live is the last thing it learns on Earth, and it learns it by observation, which is the only skill it was built with.
+- **The reason (why it cannot just stay).** Staying means watching. The file is closed, the site is cleared, and a demolition crew is already routed this way — hiding in the canopy does not stop a schedule. The correction cannot be transmitted, either: a retired unit has no standing and no channel. Someone has to turn up in person, with the survey data and with something alive standing next to it.
+
+So the drone raises monkeys to carry it across the galaxy to overturn the best work it ever did — and the crew it spends getting there are the children of the planet it is trying to save. That is the ache the run loop is built on, and it is why every jump costs something you love.
+
+### 1.4 The escalation `[C]`
+
+The threat is not a navy. It is a **works programme**, and that is what makes the ladder funny and then not funny.
+
+The first sector boss should read, on approach, as the most frightening thing the player has ever seen: enormous, silent, unhurried, ignoring your hails. It is a **grader** — the space equivalent of a steamroller. It has no weapons. It does not fight back until you damage it, and then only with the tools it flattens rock with. Beating it is terrifying; realising afterwards what it was is the joke, and realising there is an entire industry behind it is the dread.
+
+Sketch of the ladder — one boss per sector, each a rung further up the same org chart:
+
+| Sector | Boss | What it actually is |
+|---|---|---|
+| 1 | **Grader** | Surface flattening unit. No guns, absurd hull, does not consider you a hazard. |
+| 2 | **Clearance barge** | Cuts asteroids out of the right-of-way. Its cutting beams are tools, which is worse. |
+| 3 | **Compliance cutter** | The first thing built to fight — but it fights the way an inspectorate fights: boarders, seizures, citations. Boarding melee (§3) peaks here. |
+| 4 | **Project superintendent** | A genuine warship, escorting the schedule. The first opponent that has read your file and does not care. |
+| 5 | **Head office** | Not a ship. A desk, a queue, and a broadcast array. Getting there is the fight; what you say when you arrive is the ending. |
+
+Nobody on this ladder is evil. Every one of them is doing a job that was signed off upstream, and the drone's own report is what signed it. The horror is indifference and the comedy is scale — a game about a machine and six monkeys trying to get an amendment filed before the earth-movers arrive.
+
+The win condition has two halves, and they are separable — which is what makes the ending worth playing for:
+
+1. **Stop the works.** Reach head office, produce the survey and living witnesses, get the finding overturned before the crew reaches Earth.
+2. **Spread the story.** Use the array. It is one thing to save the planet on a technicality; it is another for the galaxy to hear that the paperwork nearly ate a living world, and who stopped it.
+
+Open `[X]`: whether surviving crew count changes the ending (arriving with witnesses vs. arriving alone with data), and whether the drone can broadcast without going home at all — a worse, faster, sadder ending.
+
+### 1.5 The four load-bearing answers `[C]`
+
+Everything below exists to stop the premise collapsing the first time a player asks an obvious question.
+
+**Where does the ship come from? You steal it, and it was never a secret.**
+
+The drone does not build a starship. The route works had already started staging when the assessment was commissioned: marker buoys, a fuel depot, and — parked in Earth orbit and written off the moment the site was cleared — a contractor's **crew tender**. Tenders do not get flown home; they get abandoned in place and billed to the project. It is ugly, cheap, slow, and built around five stations because that is how the concern's own labour crews work.
+
+The drone spends the years after the cold open doing exactly what it was built to do — fine manipulation, sampling, patient cataloguing — turned to refitting a hull it was never issued. That also sets the upgrade economy: **scrap is the enemy's own parts**, stripped off the works you fight, because every ship in the game came out of the same catalogue.
+
+**Why can the drone not fly it itself? Because of a policy, not a limitation.**
+
+The tender's systems will not arm without a *licensed living operator* signed on at each station. It is an insurance interlock — the concern's hulls refuse to run unattended so that liability always lands on a warm body. The drone is disqualified by paperwork twice over: once as a retired unit, once as a machine. The same bureaucracy that condemned the planet is what forces it to raise a crew, which is the joke the whole game rests on.
+
+**Is the stable on Earth? Yes — at the old survey camp.**
+
+The base camp the drone worked out of becomes the habitat: pens, a feed store, training ground, and a breeding record it keeps with the same rigour it once kept the survey. That is where **breeding, deep training and crew selection** happen between voyages (§6), and it is the reason a total loss is survivable at all: the bloodlines never leave the planet.
+
+It also has a clock on it. The stable is safe exactly until the works arrive, which is what makes the meta-layer tense rather than cosy. `[X]` Later beat worth considering: the works get close enough that the stable has to be evacuated to orbit for the final act.
+
+**Do the monkeys get intelligence chips? No. They get a collar.**
+
+Chips would eat the game. If hardware can make a monkey smart, training, feeding, friendship and breeding — every system inherited from Monkey Puncher, which is the entire meta-progression — stops mattering. So the hardware never touches cognition:
+
+- **Interface collar** — two-way translation, so the drone can give an order and hear an answer. It grants *communication*, not intelligence. Obedience still depends on friendship and care.
+- **Station harness** — remaps controls built for tall bipeds onto monkey ergonomics. Ergonomics, not aptitude.
+- **The forged licence** — the collar also emits an operator signature, which is how six monkeys satisfy an interlock written for licensed crew. The drone is, quite literally, forging papers for monkeys. It is the most on-theme object in the game.
+
+`[X]` If an implant mechanic is ever wanted, it should be rare, costly and *tragic* — trading one capped stat for another with an obedience or friendship penalty. Never a free brain.
+
+**Do you fly home after every voyage? No. Only when you fail.**
+
+The voyage is a one-way advance across the sectors, and a successful one ends the game — you reach head office, overturn the finding, use the array. There is no round trip to grind.
+
+A **wipe** is what returns you to the stable, and the fiction of it is deliberately grim: the drone is small, hardened and survivable in a way its crew is not. It comes home the only way anything comes to Earth now — riding the works traffic already heading this way. It takes months. It arrives alone, and the schedule has advanced while it travelled.
+
+That gives the roguelike loop a cost past "try again": every failed voyage burns calendar against the demolition date, while the bloodlines you bred get better. Meta-progress and meta-pressure pull in opposite directions, which is the shape a run-based game wants.
+
+There is one voluntary exit: **abort at a safe beacon**. You lose the leg and most of the scrap, you keep the crew, and you go home to breed from monkeys that have actually flown. It costs less calendar than dying does — the game should reward knowing when to turn back, because that is a decision, and dying is not.
 
 ## 2. The fusion, decided
 
@@ -52,7 +192,7 @@ The existing project is unusually clean: strict `ui → GameState → core` laye
 - **`core/sector_map.gd`** — procedural beacon graph per sector, node types, pathing.
 - **`core/event.gd` + `core/data/event_db.gd`** — the text-event system (distress calls, hazards, stores, choices with stat checks).
 - **`core/stable.gd`** — the home meta: roster of bloodlines, breeding between voyages, crew selection, ship unlocks.
-- **`core/spirit.gd`** *(optional / thin)* — the player layer: what the spirit spends and carries across permadeath.
+- **`core/drone.gd`** *(optional / thin)* — the player layer: what the drone spends and carries across permadeath. Specified as `spirit.gd` in earlier drafts; §7 renames it.
 
 ## 4. The bridge: monkey stats → ship stations
 
@@ -110,15 +250,17 @@ Between voyages you return to the stable — the persistent layer, saved separat
 
 This is where "roguelike + persistent stable" resolves the core clash between FTL (fresh every run) and MP (generational progress): the *voyage* is roguelike, the *bloodline* is generational.
 
-## 7. The spirit (player framing)
+## 7. The drone (player framing)
 
-Framing the player as a spirit is not just flavour — it pays for three mechanics diegetically:
+The premise in §1.1 is load-bearing, not decorative. Three mechanics come out of it directly:
 
-- **Real-time-with-pause** is the spirit stopping time to issue orders.
-- **You coach, you don't fight** — the spirit directs monkeys and allocates the ship's power rather than acting directly, which is exactly FTL's captain-god-hand and MP's trainer role fused.
-- **Persistence across permadeath** — the spirit endures when a ship and crew are lost, carrying the bloodlines and whatever meta-currency forward. It explains why "you" survive to breed again.
+- **Real-time-with-pause** is the drone thinking faster than its crew — time dilates while it issues orders, because it is a machine and they are not.
+- **You coach, you don't fight** — the drone directs monkeys and reroutes the ship's power rather than acting directly, which is exactly FTL's captain-god-hand and MP's trainer role fused. It is also the constraint: no hands.
+- **Persistence across permadeath** — the drone is data and survives what the crew does not, carrying the bloodlines and whatever meta-currency forward. It explains why "you" get to breed again after a total loss.
 
-Open question `[X]`: whether the spirit has its own progression (relics, blessings, a between-run currency) or is a pure framing device.
+Vocabulary: the player is the **drone** throughout code and UI. `core/spirit.gd` in §3 is the same layer under an earlier name; if it is ever written, it is `core/drone.gd`.
+
+Open question `[X]`: whether the drone has its own progression (salvaged subroutines, a between-voyage currency) or is a pure framing device.
 
 ## 8. Build roadmap
 
@@ -158,7 +300,7 @@ Following the dossier's own convention: these are the unknowns to resolve delibe
 | 6 | ~~Crew count vs. station count~~ **Resolved:** 5 stations, crew cap 6, voyage starts with 4. | Crew / Ship |
 | 7 | Boarding-melee frequency and how the boxing sim's 3-round shape maps to a quick fight | Boarding |
 | 8 | The advancing threat's identity and fiction (a Saru-style syndicate? a cosmic entity?) | Voyage / story |
-| 9 | Whether the spirit has its own progression, or is pure framing (§7) | Spirit |
+| 9 | Whether the drone has its own progression, or is pure framing (§7) | Drone |
 | 10 | Does monkey *type/species* map to a station affinity or a ship bonus? | Crew / Species |
 | 11 | Power-allocation model — free like FTL, or constrained by a crew stat? | Ship |
 | 12 | Save split: what exactly is disposable (voyage) vs. persistent (stable) | Save |

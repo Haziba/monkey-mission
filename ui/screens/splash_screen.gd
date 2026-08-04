@@ -14,8 +14,8 @@ extends GameScreen
 ## the title screen. That is the whole screen — it owns no run state and calls
 ## nothing on GameState.
 ##
-## ART IS PLACEHOLDER SHAPES: ellipses, rects, a triangle-fan starburst and a
-## checkerboard, all in `_draw`. No image files. Colours come from Palette.
+## ART IS STAND-IN ART (ARCHITECTURE §17): ellipses, rects, a triangle-fan
+## starburst and a checkerboard, all in `_draw`. Colours come from Palette.
 
 enum Beat { SPACE, FLYBY, WIPE, TITLE }
 

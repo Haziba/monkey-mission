@@ -48,6 +48,10 @@ enum Screen {
 	DAY_END,
 	## The Monkey Mission intro sequence — the app's first frame, ahead of TITLE.
 	SPLASH,
+	## The playable prologue, in the order it is played: the drone stocks a
+	## larder, then traps the crew that eats it.
+	PROLOGUE_FORAGE,
+	PROLOGUE_TRAP,
 }
 
 ## Reconciled by the Integration agent: several entries named a `*_screen.tscn`
@@ -80,6 +84,8 @@ const SCENE_PATHS: Dictionary = {
 	Screen.SETTINGS: "res://ui/screens/settings_screen.tscn",
 	Screen.DAY_END: "res://ui/screens/day_end.tscn",
 	Screen.SPLASH: "res://ui/screens/splash_screen.tscn",
+	Screen.PROLOGUE_FORAGE: "res://ui/screens/prologue_forage.tscn",
+	Screen.PROLOGUE_TRAP: "res://ui/screens/prologue_trap.tscn",
 }
 
 const PLACEHOLDER_SCENE := "res://ui/screens/placeholder_screen.tscn"
