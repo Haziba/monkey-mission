@@ -13,6 +13,8 @@ config/name="Monkey Puncher MK2"
 config/description="Mobile remake of the GBC raising-sim / boxing game Monkey Puncher."
 run/main_scene="res://ui/main.tscn"
 config/features=PackedStringArray("4.7", "Mobile")
+; The drone, doing duty as the launcher icon. Stand-in art like everything else.
+config/icon="res://assets/placeholder/prologue/drone.png"
 
 [autoload]
 
@@ -50,5 +52,8 @@ mp_back={
 
 renderer/rendering_method="mobile"
 renderer/rendering_method.mobile="gl_compatibility"
+; Android export refuses to run without it: the platform needs ETC2/ASTC
+; variants of every imported texture.
+textures/vram_compression/import_etc2_astc=true
 textures/canvas_textures/default_texture_filter=0
 anti_aliasing/quality/msaa_2d=0

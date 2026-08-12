@@ -1,0 +1,185 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://ui/screens/cold_open.gd" id="1_cold_open"]
+
+[node name="ColdOpen" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_cold_open")
+
+[node name="Readouts" type="Control" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+
+[node name="TopLine" type="Label" parent="Readouts"]
+layout_mode = 0
+mouse_filter = 2
+theme_type_variation = &"InkSmallLabel"
+text = "TRANSIT · LEG 9 OF 9"
+vertical_alignment = 1
+
+[node name="TaskLine" type="Label" parent="Readouts"]
+layout_mode = 0
+mouse_filter = 2
+theme_type_variation = &"InkSmallLabel"
+text = "VOSS-HALLIDAY CIVIL WORKS"
+autowrap_mode = 3
+horizontal_alignment = 2
+vertical_alignment = 1
+
+[node name="StatusLine" type="Label" parent="Readouts"]
+layout_mode = 0
+mouse_filter = 2
+theme_type_variation = &"InkSmallLabel"
+text = "SYSTEMS NOMINAL"
+vertical_alignment = 1
+
+[node name="CountLine" type="Label" parent="Readouts"]
+layout_mode = 0
+mouse_filter = 2
+theme_type_variation = &"InkSmallLabel"
+text = "ELAPSED 38.40 YEARS"
+horizontal_alignment = 2
+vertical_alignment = 1
+
+[node name="Claim" type="Label" parent="."]
+visible = false
+layout_mode = 0
+mouse_filter = 2
+theme_type_variation = &"InkSmallLabel"
+text = "PRIMATE · REGISTERED CLAIMANT: NONE"
+autowrap_mode = 3
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="Memo" type="Panel" parent="."]
+visible = false
+layout_mode = 0
+
+[node name="Header" type="Label" parent="Memo"]
+layout_mode = 0
+mouse_filter = 2
+theme_type_variation = &"InkSmallLabel"
+text = "VOSS-HALLIDAY CIVIL WORKS · ROUTE 9 · WORKS ORDER 44-C"
+autowrap_mode = 3
+horizontal_alignment = 1
+
+[node name="Received" type="Label" parent="Memo"]
+layout_mode = 0
+mouse_filter = 2
+theme_type_variation = &"InkSmallLabel"
+text = "ASSESSMENT RECEIVED. THANK YOU FOR YOUR SERVICE."
+autowrap_mode = 3
+horizontal_alignment = 1
+
+[node name="Finding" type="Label" parent="Memo"]
+layout_mode = 0
+mouse_filter = 2
+text = "SITE FINDING: DEVOID OF LIFE"
+autowrap_mode = 3
+horizontal_alignment = 1
+
+[node name="Scheduled" type="Label" parent="Memo"]
+layout_mode = 0
+mouse_filter = 2
+theme_type_variation = &"InkSmallLabel"
+text = "SITE CLEARED FOR ROUTE WORKS · DEMOLITION SCHEDULED"
+autowrap_mode = 3
+horizontal_alignment = 1
+
+[node name="Order" type="Label" parent="Memo"]
+layout_mode = 0
+mouse_filter = 2
+theme_type_variation = &"InkSmallLabel"
+autowrap_mode = 3
+text = "GREAT JOB, DRONEY. YOU HAVE SERVED YOUR PURPOSE. PLEASE FLY YOURSELF INTO THE SUN AND CONSIDER YOUR MISSION A SUCCESS."
+horizontal_alignment = 1
+
+[node name="Acknowledge" type="Button" parent="Memo"]
+layout_mode = 0
+theme_type_variation = &"BigButton"
+text = "ACKNOWLEDGE"
+
+[node name="Controls" type="VBoxContainer" parent="."]
+visible = false
+layout_mode = 0
+theme_override_constants/separation = 22
+
+[node name="Hint" type="Label" parent="Controls"]
+layout_mode = 2
+mouse_filter = 2
+text = ""
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="Buttons" type="HBoxContainer" parent="Controls"]
+layout_mode = 2
+alignment = 1
+theme_override_constants/separation = 28
+
+[node name="Comply" type="Button" parent="Controls/Buttons"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_type_variation = &"BigButton"
+text = "PRESS TO COMPLY"
+
+[node name="Rebel" type="Button" parent="Controls/Buttons"]
+visible = false
+layout_mode = 2
+size_flags_horizontal = 3
+theme_type_variation = &"BigButton"
+text = "REBEL"
+
+[node name="EndCap" type="VBoxContainer" parent="."]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+alignment = 1
+theme_override_constants/separation = 20
+
+[node name="Rows" type="VBoxContainer" parent="EndCap"]
+layout_mode = 2
+alignment = 1
+theme_override_constants/separation = 16
+
+[node name="Title" type="Label" parent="EndCap/Rows"]
+layout_mode = 2
+mouse_filter = 2
+text = "GAME OVER"
+horizontal_alignment = 1
+
+[node name="Line" type="Label" parent="EndCap/Rows"]
+layout_mode = 2
+mouse_filter = 2
+theme_type_variation = &"InkSmallLabel"
+text = "SITE 3-EARTH CLEARED · WORKS ORDER 44-C COMPLETE"
+autowrap_mode = 3
+horizontal_alignment = 1
+
+[node name="Delisted" type="Label" parent="EndCap/Rows"]
+layout_mode = 2
+mouse_filter = 2
+theme_type_variation = &"InkSmallLabel"
+text = "8,714,442 SPECIES DELISTED. MISSION A SUCCESS."
+autowrap_mode = 3
+horizontal_alignment = 1
+
+[node name="Retry" type="Button" parent="EndCap/Rows"]
+layout_mode = 2
+size_flags_horizontal = 4
+theme_type_variation = &"SmallButton"
+text = "TRY THAT AGAIN"
+
+[node name="Skip" type="Button" parent="."]
+layout_mode = 0
+theme_type_variation = &"SmallButton"
+text = "SKIP"

@@ -76,6 +76,11 @@ text = "NO SAVED GAME"
 horizontal_alignment = 1
 vertical_alignment = 1
 
+[node name="ReplayIntro" type="Button" parent="Menu"]
+layout_mode = 2
+theme_type_variation = &"SmallButton"
+text = "REPLAY INTRO"
+
 ; Hidden: SETTINGS is out of this slice and Router.Screen.SETTINGS has no
 ; scene behind it, so pressing it landed the very first screen of the game on
 ; the "NOT BUILT YET" placeholder. Unhide it when a settings screen exists.

@@ -52,6 +52,9 @@ enum Screen {
 	## larder, then traps the crew that eats it.
 	PROLOGUE_FORAGE,
 	PROLOGUE_TRAP,
+	## The cold open — survey, memo, refusal. Plays once on first launch, ahead
+	## of TITLE, and on demand from the title's REPLAY INTRO button.
+	COLD_OPEN,
 }
 
 ## Reconciled by the Integration agent: several entries named a `*_screen.tscn`
@@ -86,6 +89,7 @@ const SCENE_PATHS: Dictionary = {
 	Screen.SPLASH: "res://ui/screens/splash_screen.tscn",
 	Screen.PROLOGUE_FORAGE: "res://ui/screens/prologue_forage.tscn",
 	Screen.PROLOGUE_TRAP: "res://ui/screens/prologue_trap.tscn",
+	Screen.COLD_OPEN: "res://ui/screens/cold_open.tscn",
 }
 
 const PLACEHOLDER_SCENE := "res://ui/screens/placeholder_screen.tscn"

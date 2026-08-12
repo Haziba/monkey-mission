@@ -74,6 +74,8 @@ Day one, before any menu, before a single monkey. Five beats, played once:
 
 The player's first act in the game is obeying, and the drone's first act is not. That is the whole character in one beat.
 
+**Built** as `ui/screens/cold_open.gd` (`Router.Screen.COLD_OPEN`). It plays once — the splash routes into it only while `Prefs.intro_seen()` is false, and every exit from the screen sets that flag — after which the app opens on the title, which carries a **REPLAY INTRO** button. `core/prefs.gd` holds the flag in `user://prefs.cfg` rather than the save file, so deleting a save does not sentence the player to watch it again. Comply all the way and you get the works order carried out: a game over over the wreckage, with a retry that drops you back at the sun. SKIP and hardware-back both exit cleanly at any point.
+
 ### 1.3 Why it wants to go home `[C]`
 
 Not revenge — an angry drone is a worse companion for a game about raising animals, and "machine wants to kill its makers" is the version everyone has already seen. The motive is built from two halves that arrive at different times:

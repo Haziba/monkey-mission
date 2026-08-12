@@ -78,6 +78,7 @@ const DEFAULT_PROTAGONIST := RunState.Protagonist.KENTA
 @onready var _continue: Button = $Menu/Continue
 @onready var _save_info: Label = $Menu/SaveInfo
 @onready var _settings: Button = $Menu/Settings
+@onready var _replay_intro: Button = $Menu/ReplayIntro
 @onready var _status: Label = $Menu/Status
 @onready var _footer: Label = $Footer
 @onready var _confirm: Control = $Confirm
@@ -94,6 +95,7 @@ func _ready() -> void:
 	_new_game.pressed.connect(_on_new_game_pressed)
 	_continue.pressed.connect(_on_continue_pressed)
 	_settings.pressed.connect(_on_settings_pressed)
+	_replay_intro.pressed.connect(_on_replay_intro_pressed)
 	_confirm_cancel.pressed.connect(_on_confirm_cancelled)
 	_confirm_overwrite.pressed.connect(_on_confirm_accepted)
 
@@ -327,6 +329,14 @@ func _on_continue_pressed() -> void:
 func _on_settings_pressed() -> void:
 	Sfx.click()
 	Router.push(Router.Screen.SETTINGS)
+
+
+## The cold open plays itself on first launch and is then out of the way. This is
+## how anyone gets it back. `reset_to` rather than `push`, because the intro ends
+## by routing to the title itself — pushing would leave a title underneath it.
+func _on_replay_intro_pressed() -> void:
+	Sfx.click()
+	Router.reset_to(Router.Screen.COLD_OPEN)
 
 
 ## Route straight to wherever the loaded run left off. A save taken during the

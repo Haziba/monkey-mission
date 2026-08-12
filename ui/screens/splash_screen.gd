@@ -118,7 +118,12 @@ func _input(event: InputEvent) -> void:
 		_t = REST_AT
 		return
 	Sfx.confirm()
-	Router.replace(Router.Screen.TITLE)
+	# First launch runs the cold open; every launch after it opens on the title,
+	# where REPLAY INTRO is waiting for anyone who wants it again.
+	if Prefs.intro_seen():
+		Router.replace(Router.Screen.TITLE)
+	else:
+		Router.replace(Router.Screen.COLD_OPEN)
 
 
 # --- layout ----------------------------------------------------------------
