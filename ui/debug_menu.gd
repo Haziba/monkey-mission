@@ -1,4 +1,10 @@
+class_name DebugMenu
 extends CanvasLayer
+
+## Global debug switches. Static so screens can read them without owning a
+## reference to the menu, and so they survive the menu freeing itself in a
+## release build (they stay at their default `false`).
+static var show_colliders := false
 
 ## The jump menu — a debug-build-only button that goes straight to any screen.
 ##
@@ -96,6 +102,17 @@ func _build_panel() -> void:
 	title.add_theme_font_size_override("font_size", Palette.FONT_BODY)
 	title.add_theme_color_override("font_color", Palette.INK_LIGHT)
 	column.add_child(title)
+
+	var colliders := CheckBox.new()
+	colliders.text = "SHOW COLLIDERS"
+	colliders.button_pressed = DebugMenu.show_colliders
+	colliders.focus_mode = Control.FOCUS_NONE
+	colliders.add_theme_font_size_override("font_size", Palette.FONT_SMALL)
+	colliders.add_theme_color_override("font_color", Palette.INK_LIGHT)
+	colliders.toggled.connect(func(pressed: bool) -> void:
+		DebugMenu.show_colliders = pressed
+		Sfx.click())
+	column.add_child(colliders)
 
 	# Scrolled, not packed: the enum grows every time a screen is added, and a
 	# menu that silently loses its last row the day someone appends to it is

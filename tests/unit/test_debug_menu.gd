@@ -44,8 +44,8 @@ func test_main_actually_instances_the_menu_above_the_router() -> void:
 
 func test_every_screen_gets_a_button() -> void:
 	var buttons := buttons_under(_menu())
-	# One per screen, plus the DEBUG toggle and CLOSE.
-	assert_eq(buttons.size(), Router.Screen.size() + 2,
+	# One per screen, plus the DEBUG toggle, the SHOW COLLIDERS checkbox, and CLOSE.
+	assert_eq(buttons.size(), Router.Screen.size() + 3,
 		"expected a jump button for every Router.Screen entry")
 
 

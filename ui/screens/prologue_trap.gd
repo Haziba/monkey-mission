@@ -308,6 +308,8 @@ func _draw() -> void:
 		_draw_monkey(monkey)
 	_draw_trap()
 	_draw_drone()
+	if DebugMenu.show_colliders:
+		_draw_colliders()
 
 
 func _draw_backdrop() -> void:
@@ -373,6 +375,23 @@ func _draw_trap() -> void:
 	else:
 		draw_rect(box, Palette.PANEL_LIGHT)
 	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+
+
+## The dish's catch band and each monkey's current tap-x. What `caught_indices`
+## actually checks, drawn on top of everything so a mistimed drop is legible.
+func _draw_colliders() -> void:
+	var band_x := (PILE_X - DISH_HALF) * size.x
+	var band_w := DISH_HALF * 2.0 * size.x
+	var ground := size.y * GROUND_Y
+	var band := Rect2(band_x, ground - size.y * 0.04, band_w, size.y * 0.08)
+	draw_rect(band, Color(Palette.WARN, 0.25))
+	draw_rect(band, Color(Palette.WARN, 0.9), false, 2.0)
+	for monkey in _monkeys:
+		var mx := _monkey_x(monkey) * size.x
+		var caught := absf(_monkey_x(monkey) - PILE_X) <= DISH_HALF
+		var tint := Color(Palette.WARN if caught else Palette.INK_LIGHT, 0.9)
+		draw_line(Vector2(mx, ground - size.y * MONKEY_HEIGHT), Vector2(mx, ground), tint, 2.0)
+		draw_circle(Vector2(mx, ground), 6.0, tint)
 
 
 ## The drone holds the line off to one side of the trap — never over it, or it

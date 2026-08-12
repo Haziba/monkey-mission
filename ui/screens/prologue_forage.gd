@@ -247,6 +247,14 @@ func _banana_box(banana: Dictionary) -> Rect2:
 	return Rect2(centre - Vector2(h, h) * 0.5, Vector2(h, h)).grow(TAP_PAD)
 
 
+## Outline every tap box the hit test would accept. Debug menu switch.
+func _draw_colliders() -> void:
+	for banana in _bananas:
+		if banana["pop"] > 0.0 or banana["z"] > TAPPABLE_Z:
+			continue
+		draw_rect(_banana_box(banana), Color(Palette.WARN, 0.9), false, 2.0)
+
+
 func _refresh_count() -> void:
 	_count.text = "BANANAS  %d" % _collected
 
@@ -265,6 +273,8 @@ func _draw() -> void:
 		_draw_banana(banana)
 	_draw_ferns()
 	_draw_drone()
+	if DebugMenu.show_colliders:
+		_draw_colliders()
 
 
 ## A copy sorted far-to-near. Copied rather than sorted in place because the
