@@ -27,7 +27,7 @@ Sfx="*res://ui/sfx.gd"
 window/size/viewport_width=1920
 window/size/viewport_height=880
 window/stretch/mode="canvas_items"
-window/stretch/aspect="expand"
+window/stretch/aspect="keep"
 window/handheld/orientation=0
 
 [gui]
