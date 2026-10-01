@@ -55,6 +55,10 @@ enum Screen {
 	## The cold open — survey, memo, refusal. Plays once on first launch, ahead
 	## of TITLE, and on demand from the title's REPLAY INTRO button.
 	COLD_OPEN,
+	## The persistent home layer between voyages — the visual stable, with the
+	## crew wandering the sleeping quarters, cafeteria, barracks and jungle gym
+	## by a time-of-day clock. `docs/MISSION-ARCHITECTURE.md` §9.
+	STABLE,
 }
 
 ## Reconciled by the Integration agent: several entries named a `*_screen.tscn`
@@ -90,6 +94,7 @@ const SCENE_PATHS: Dictionary = {
 	Screen.PROLOGUE_FORAGE: "res://ui/screens/prologue_forage.tscn",
 	Screen.PROLOGUE_TRAP: "res://ui/screens/prologue_trap.tscn",
 	Screen.COLD_OPEN: "res://ui/screens/cold_open.tscn",
+	Screen.STABLE: "res://ui/screens/stable_screen.tscn",
 }
 
 const PLACEHOLDER_SCENE := "res://ui/screens/placeholder_screen.tscn"

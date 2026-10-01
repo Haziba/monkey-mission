@@ -27,6 +27,9 @@ const JUMP_PARAMS: Dictionary = {
 	Router.Screen.PROLOGUE_FORAGE: {"new_game": true},
 	Router.Screen.INTRO: {"new_game": true},
 	Router.Screen.TRAINING_SESSION: {"activity": 0},
+	## The stable currently shows a single monkey; the screen synthesises one
+	## if no run is behind it, so no seed count is needed.
+	Router.Screen.STABLE: {},
 }
 
 ## Screens that read the run the moment they open. Jumping to one without a run
