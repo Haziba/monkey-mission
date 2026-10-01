@@ -127,7 +127,10 @@ func test_choosing_an_activity_shuts_the_sheet() -> void:
 func test_sparring_is_disabled_rather_than_missing() -> void:
 	# Dossier §4 [C] and §14: dropping sparring is the single most-repeated error
 	# about this game, so it stays in the menu, greyed, rather than being deleted.
+	# The mission reskin renames the label; the slot must still be present, still
+	# disabled, and still show the SPARRING activity's current display name.
 	var sparring := _menu().get_child(HomeScreenScript.MenuSlot.SPARRING) as Button
 	assert_true(sparring.disabled, "sparring is out of slice and should be disabled")
-	assert_true(sparring.text.to_upper().contains("SPAR"),
-		"the sparring slot should still name sparring")
+	var expected := Training.display_name(Training.Activity.SPARRING).to_upper()
+	assert_true(sparring.text.to_upper().contains(expected),
+		"the sparring slot should still name the SPARRING activity")

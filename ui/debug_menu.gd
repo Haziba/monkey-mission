@@ -116,6 +116,7 @@ func _build_panel() -> void:
 		DebugMenu.show_colliders = pressed
 		Sfx.click())
 	column.add_child(colliders)
+	column.add_child(_build_training_row())
 
 	# Scrolled, not packed: the enum grows every time a screen is added, and a
 	# menu that silently loses its last row the day someone appends to it is
@@ -171,11 +172,42 @@ func _on_toggle() -> void:
 	Sfx.click()
 
 
+## One row of activity picks so the tester lands in the right discipline
+## instead of always in the enum's activity 0 (THREAT RESPONSE).
+func _build_training_row() -> HBoxContainer:
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", Palette.GUTTER)
+	var caption := Label.new()
+	caption.text = "TRAINING:"
+	caption.add_theme_font_size_override("font_size", Palette.FONT_SMALL)
+	caption.add_theme_color_override("font_color", Palette.INK_LIGHT)
+	caption.custom_minimum_size = Vector2(120.0, 0.0)
+	row.add_child(caption)
+	for activity in Training.SLICE_ACTIVITIES:
+		var button := Button.new()
+		button.text = Training.display_name(activity)
+		button.custom_minimum_size = Vector2(0.0, JUMP_BUTTON_H)
+		button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		button.focus_mode = Control.FOCUS_NONE
+		button.add_theme_font_size_override("font_size", Palette.FONT_SMALL)
+		button.pressed.connect(_jump.bind(
+			Router.Screen.TRAINING_SESSION, {"activity": int(activity)}))
+		row.add_child(button)
+	return row
+
+
 ## `reset_to` rather than `push`: this is a "start here" button, not a detour,
 ## and leaving the screen you jumped from underneath makes back do something
 ## nobody predicted.
-func _jump(screen: int) -> void:
+##
+## `override_params` lets a specialised launcher (e.g. the training-activity
+## row) hand its own params through the same seed-and-jump plumbing instead of
+## reimplementing it.
+func _jump(screen: int, override_params: Dictionary = {}) -> void:
 	_panel.visible = false
 	if NEEDS_RUN.has(screen) and not GameState.has_run():
 		GameState.new_run(RunState.Protagonist.KENTA)
-	Router.reset_to(screen, JUMP_PARAMS.get(screen, {}))
+		GameState.monkey().friendship = Monkey.FRIENDSHIP_MAX  # ponytail: fully-befriended debug monkey so training is one tap away; trip-out from low stat still exposes weak-drill behaviour
+	var params: Dictionary = override_params if not override_params.is_empty() \
+		else JUMP_PARAMS.get(screen, {})
+	Router.reset_to(screen, params)

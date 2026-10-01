@@ -1,7 +1,9 @@
-[gd_scene load_steps=3 format=3]
+[gd_scene load_steps=5 format=3]
 
 [ext_resource type="Script" path="res://ui/screens/training_screen.gd" id="1_training"]
 [ext_resource type="PackedScene" path="res://ui/components/hud_boxes.tscn" id="2_hud"]
+[ext_resource type="Texture2D" path="res://assets/placeholder/prologue/drone.png" id="3_drone"]
+[ext_resource type="Texture2D" path="res://assets/placeholder/prologue/monkey_walk_a.png" id="4_monkey"]
 
 [node name="TrainingScreen" type="Control"]
 layout_mode = 3
@@ -30,27 +32,36 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
-theme_override_constants/margin_left = 40
-theme_override_constants/margin_top = 40
-theme_override_constants/margin_right = 40
-theme_override_constants/margin_bottom = 40
+theme_override_constants/margin_left = 32
+theme_override_constants/margin_top = 20
+theme_override_constants/margin_right = 32
+theme_override_constants/margin_bottom = 20
 
 [node name="Col" type="VBoxContainer" parent="Root"]
 layout_mode = 2
 mouse_filter = 2
-theme_override_constants/separation = 24
+theme_override_constants/separation = 16
 
 [node name="Hud" parent="Root/Col" instance=ExtResource("2_hud")]
-custom_minimum_size = Vector2(0, 104)
+custom_minimum_size = Vector2(0, 88)
 layout_mode = 2
 
-[node name="Stage" type="Control" parent="Root/Col"]
-custom_minimum_size = Vector2(0, 380)
+[node name="MainRow" type="HBoxContainer" parent="Root/Col"]
+custom_minimum_size = Vector2(0, 420)
 layout_mode = 2
 size_flags_vertical = 3
 mouse_filter = 2
+theme_override_constants/separation = 20
 
-[node name="Backdrop" type="ColorRect" parent="Root/Col/Stage"]
+[node name="Stage" type="Control" parent="Root/Col/MainRow"]
+custom_minimum_size = Vector2(800, 0)
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+mouse_filter = 2
+clip_contents = true
+
+[node name="Backdrop" type="ColorRect" parent="Root/Col/MainRow/Stage"]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -59,264 +70,193 @@ grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
 
-[node name="Ground" type="ColorRect" parent="Root/Col/Stage"]
+[node name="Ground" type="ColorRect" parent="Root/Col/MainRow/Stage"]
 layout_mode = 1
 anchors_preset = 12
 anchor_top = 1.0
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_top = -160.0
+offset_top = -100.0
 grow_horizontal = 2
 grow_vertical = 0
 mouse_filter = 2
 
-[node name="GroundLine" type="ColorRect" parent="Root/Col/Stage"]
+[node name="GroundLine" type="ColorRect" parent="Root/Col/MainRow/Stage"]
 layout_mode = 1
 anchors_preset = 12
 anchor_top = 1.0
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_top = -160.0
-offset_bottom = -152.0
+offset_top = -100.0
+offset_bottom = -96.0
 grow_horizontal = 2
 grow_vertical = 0
 mouse_filter = 2
 
-[node name="Apparatus" type="ColorRect" parent="Root/Col/Stage"]
+[node name="Apparatus" type="ColorRect" parent="Root/Col/MainRow/Stage"]
+layout_mode = 1
+anchors_preset = 3
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -260.0
+offset_top = -400.0
+offset_right = -160.0
+offset_bottom = -104.0
+grow_horizontal = 0
+grow_vertical = 0
+mouse_filter = 2
+
+[node name="TrainerRig" type="TextureRect" parent="Root/Col/MainRow/Stage"]
+layout_mode = 1
+anchors_preset = 2
+anchor_top = 1.0
+anchor_bottom = 1.0
+offset_left = 80.0
+offset_top = -300.0
+offset_right = 300.0
+offset_bottom = -104.0
+grow_vertical = 0
+mouse_filter = 2
+texture = ExtResource("3_drone")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="MonkeyRig" type="TextureRect" parent="Root/Col/MainRow/Stage"]
 layout_mode = 1
 anchors_preset = 7
 anchor_left = 0.5
 anchor_top = 1.0
 anchor_right = 0.5
 anchor_bottom = 1.0
-offset_left = -45.0
-offset_top = -470.0
-offset_right = 45.0
-offset_bottom = -170.0
+offset_left = -110.0
+offset_top = -320.0
+offset_right = 110.0
+offset_bottom = -104.0
 grow_horizontal = 2
 grow_vertical = 0
 mouse_filter = 2
+texture = ExtResource("4_monkey")
+expand_mode = 1
+stretch_mode = 5
 
-[node name="TrainerRig" type="Control" parent="Root/Col/Stage"]
+[node name="RepFloat" type="Label" parent="Root/Col/MainRow/Stage"]
 layout_mode = 1
-anchors_preset = 2
+anchors_preset = 7
+anchor_left = 0.5
 anchor_top = 1.0
+anchor_right = 0.5
 anchor_bottom = 1.0
-offset_left = 120.0
-offset_top = -310.0
-offset_right = 250.0
-offset_bottom = -40.0
-grow_vertical = 0
-mouse_filter = 2
-
-[node name="Legs" type="ColorRect" parent="Root/Col/Stage/TrainerRig"]
-layout_mode = 0
-offset_left = 30.0
-offset_top = 180.0
-offset_right = 100.0
-offset_bottom = 270.0
-mouse_filter = 2
-
-[node name="Body" type="ColorRect" parent="Root/Col/Stage/TrainerRig"]
-layout_mode = 0
-offset_left = 20.0
-offset_top = 90.0
-offset_right = 110.0
-offset_bottom = 190.0
-mouse_filter = 2
-
-[node name="Head" type="ColorRect" parent="Root/Col/Stage/TrainerRig"]
-layout_mode = 0
-offset_left = 30.0
-offset_top = 20.0
-offset_right = 100.0
-offset_bottom = 95.0
-mouse_filter = 2
-
-[node name="Hair" type="ColorRect" parent="Root/Col/Stage/TrainerRig"]
-layout_mode = 0
-offset_left = 26.0
-offset_top = 6.0
-offset_right = 104.0
-offset_bottom = 36.0
-mouse_filter = 2
-
-[node name="MonkeyRig" type="Control" parent="Root/Col/Stage"]
-layout_mode = 1
-anchors_preset = 2
-anchor_top = 1.0
-anchor_bottom = 1.0
-offset_left = 620.0
-offset_top = -260.0
-offset_right = 790.0
-offset_bottom = -40.0
-grow_vertical = 0
-mouse_filter = 2
-
-[node name="Tail" type="ColorRect" parent="Root/Col/Stage/MonkeyRig"]
-layout_mode = 0
-offset_left = 2.0
-offset_top = 124.0
-offset_right = 46.0
-offset_bottom = 142.0
-mouse_filter = 2
-
-[node name="Body" type="ColorRect" parent="Root/Col/Stage/MonkeyRig"]
-layout_mode = 0
-offset_left = 40.0
-offset_top = 110.0
-offset_right = 130.0
-offset_bottom = 210.0
-mouse_filter = 2
-
-[node name="Head" type="ColorRect" parent="Root/Col/Stage/MonkeyRig"]
-layout_mode = 0
-offset_left = 47.0
-offset_top = 36.0
-offset_right = 123.0
-offset_bottom = 112.0
-mouse_filter = 2
-
-[node name="EarL" type="ColorRect" parent="Root/Col/Stage/MonkeyRig"]
-layout_mode = 0
-offset_left = 27.0
-offset_top = 48.0
-offset_right = 51.0
-offset_bottom = 82.0
-mouse_filter = 2
-
-[node name="EarR" type="ColorRect" parent="Root/Col/Stage/MonkeyRig"]
-layout_mode = 0
-offset_left = 119.0
-offset_top = 48.0
-offset_right = 143.0
-offset_bottom = 82.0
-mouse_filter = 2
-
-[node name="Face" type="ColorRect" parent="Root/Col/Stage/MonkeyRig"]
-layout_mode = 0
-offset_left = 60.0
-offset_top = 58.0
-offset_right = 110.0
-offset_bottom = 104.0
-mouse_filter = 2
-
-[node name="EyeL" type="ColorRect" parent="Root/Col/Stage/MonkeyRig"]
-layout_mode = 0
-offset_left = 68.0
-offset_top = 68.0
-offset_right = 80.0
-offset_bottom = 80.0
-mouse_filter = 2
-
-[node name="EyeR" type="ColorRect" parent="Root/Col/Stage/MonkeyRig"]
-layout_mode = 0
-offset_left = 92.0
-offset_top = 68.0
-offset_right = 104.0
-offset_bottom = 80.0
-mouse_filter = 2
-
-[node name="RepFloat" type="Label" parent="Root/Col/Stage"]
-layout_mode = 1
-anchors_preset = 2
-anchor_top = 1.0
-anchor_bottom = 1.0
-offset_left = 560.0
+offset_left = -150.0
 offset_top = -420.0
-offset_right = 860.0
-offset_bottom = -300.0
+offset_right = 150.0
+offset_bottom = -320.0
+grow_horizontal = 2
 grow_vertical = 0
 mouse_filter = 2
 text = "0"
 horizontal_alignment = 1
 vertical_alignment = 1
 
-[node name="RecordBanner" type="Label" parent="Root/Col/Stage"]
+[node name="RecordBanner" type="Label" parent="Root/Col/MainRow/Stage"]
 layout_mode = 1
 anchors_preset = 10
 anchor_right = 1.0
-offset_top = 24.0
-offset_bottom = 130.0
+offset_top = 16.0
+offset_bottom = 96.0
 grow_horizontal = 2
 mouse_filter = 2
 text = "NEW RECORD!"
 horizontal_alignment = 1
 vertical_alignment = 1
 
-[node name="Rhythm" type="VBoxContainer" parent="Root/Col"]
+[node name="Readouts" type="VBoxContainer" parent="Root/Col/MainRow"]
+custom_minimum_size = Vector2(440, 0)
 layout_mode = 2
+size_flags_vertical = 3
 mouse_filter = 2
-theme_override_constants/separation = 10
+theme_override_constants/separation = 16
 
-[node name="Legend" type="HBoxContainer" parent="Root/Col/Rhythm"]
+[node name="RhythmSection" type="VBoxContainer" parent="Root/Col/MainRow/Readouts"]
 layout_mode = 2
+size_flags_vertical = 3
+mouse_filter = 2
+theme_override_constants/separation = 8
+
+[node name="Header" type="Label" parent="Root/Col/MainRow/Readouts/RhythmSection"]
+layout_mode = 2
+text = "RHYTHM"
+
+[node name="Row" type="HBoxContainer" parent="Root/Col/MainRow/Readouts/RhythmSection"]
+layout_mode = 2
+size_flags_vertical = 3
+mouse_filter = 2
+theme_override_constants/separation = 12
+
+[node name="Track" type="Control" parent="Root/Col/MainRow/Readouts/RhythmSection/Row"]
+custom_minimum_size = Vector2(120, 0)
+layout_mode = 2
+size_flags_vertical = 3
+mouse_filter = 2
+clip_contents = true
+
+[node name="GoodZone" type="ColorRect" parent="Root/Col/MainRow/Readouts/RhythmSection/Row/Track"]
+layout_mode = 0
+offset_right = 120.0
+offset_bottom = 120.0
 mouse_filter = 2
 
-[node name="Early" type="Label" parent="Root/Col/Rhythm/Legend"]
+[node name="NearZone" type="ColorRect" parent="Root/Col/MainRow/Readouts/RhythmSection/Row/Track"]
+layout_mode = 0
+offset_top = 120.0
+offset_right = 120.0
+offset_bottom = 380.0
+mouse_filter = 2
+
+[node name="Marker" type="ColorRect" parent="Root/Col/MainRow/Readouts/RhythmSection/Row/Track"]
+layout_mode = 0
+offset_right = 120.0
+offset_bottom = 10.0
+mouse_filter = 2
+
+[node name="Legend" type="VBoxContainer" parent="Root/Col/MainRow/Readouts/RhythmSection/Row"]
 layout_mode = 2
 size_flags_horizontal = 3
-text = "TOO FAST: CRAMP"
+size_flags_vertical = 3
+mouse_filter = 2
+alignment = 0
+theme_override_constants/separation = 8
 
-[node name="Band" type="Label" parent="Root/Col/Rhythm/Legend"]
+[node name="Good" type="Label" parent="Root/Col/MainRow/Readouts/RhythmSection/Row/Legend"]
 layout_mode = 2
-size_flags_horizontal = 3
-text = "ON THE BEAT"
-horizontal_alignment = 1
+text = "TAP HERE"
 
-[node name="Late" type="Label" parent="Root/Col/Rhythm/Legend"]
+[node name="Spacer" type="Control" parent="Root/Col/MainRow/Readouts/RhythmSection/Row/Legend"]
 layout_mode = 2
-size_flags_horizontal = 3
-text = "TOO SLOW: BORED"
-horizontal_alignment = 2
+size_flags_vertical = 3
+mouse_filter = 2
 
-[node name="Track" type="Control" parent="Root/Col/Rhythm"]
-custom_minimum_size = Vector2(0, 90)
+[node name="Near" type="Label" parent="Root/Col/MainRow/Readouts/RhythmSection/Row/Legend"]
 layout_mode = 2
-mouse_filter = 2
+text = "OFF BEAT"
 
-[node name="EarlyZone" type="ColorRect" parent="Root/Col/Rhythm/Track"]
-layout_mode = 0
-offset_right = 100.0
-offset_bottom = 90.0
-mouse_filter = 2
-
-[node name="Band" type="ColorRect" parent="Root/Col/Rhythm/Track"]
-layout_mode = 0
-offset_left = 100.0
-offset_right = 200.0
-offset_bottom = 90.0
-mouse_filter = 2
-
-[node name="LateZone" type="ColorRect" parent="Root/Col/Rhythm/Track"]
-layout_mode = 0
-offset_left = 200.0
-offset_right = 300.0
-offset_bottom = 90.0
-mouse_filter = 2
-
-[node name="Marker" type="ColorRect" parent="Root/Col/Rhythm/Track"]
-layout_mode = 0
-offset_right = 12.0
-offset_bottom = 90.0
-mouse_filter = 2
-
-[node name="Verdict" type="Label" parent="Root/Col/Rhythm"]
-custom_minimum_size = Vector2(0, 64)
+[node name="Verdict" type="Label" parent="Root/Col/MainRow/Readouts"]
+custom_minimum_size = Vector2(0, 48)
 layout_mode = 2
 text = ""
 horizontal_alignment = 1
 vertical_alignment = 1
 
-[node name="Tally" type="Label" parent="Root/Col/Rhythm"]
-custom_minimum_size = Vector2(0, 44)
+[node name="Tally" type="Label" parent="Root/Col/MainRow/Readouts"]
+custom_minimum_size = Vector2(0, 32)
 layout_mode = 2
 text = ""
 horizontal_alignment = 1
 vertical_alignment = 1
 
 [node name="MessageBox" type="PanelContainer" parent="Root/Col"]
-custom_minimum_size = Vector2(0, 130)
+custom_minimum_size = Vector2(0, 84)
 layout_mode = 2
 mouse_filter = 2
 
@@ -327,7 +267,7 @@ vertical_alignment = 1
 autowrap_mode = 3
 
 [node name="TapButton" type="Button" parent="Root/Col"]
-custom_minimum_size = Vector2(0, 240)
+custom_minimum_size = Vector2(0, 160)
 layout_mode = 2
 text = "TAP!"
 
@@ -382,13 +322,13 @@ layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_left = 80.0
-offset_top = 300.0
-offset_right = -80.0
-offset_bottom = -300.0
+offset_left = 200.0
+offset_top = 200.0
+offset_right = -200.0
+offset_bottom = -200.0
 grow_horizontal = 2
 grow_vertical = 2
-theme_override_constants/separation = 40
+theme_override_constants/separation = 32
 alignment = 1
 
 [node name="Text" type="Label" parent="BlockedOverlay/Box"]
@@ -398,7 +338,7 @@ horizontal_alignment = 1
 autowrap_mode = 3
 
 [node name="Back" type="Button" parent="BlockedOverlay/Box"]
-custom_minimum_size = Vector2(0, 132)
+custom_minimum_size = Vector2(0, 120)
 layout_mode = 2
 text = "BACK"
 
@@ -424,13 +364,13 @@ layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_left = 80.0
-offset_top = 200.0
-offset_right = -80.0
-offset_bottom = -200.0
+offset_left = 200.0
+offset_top = 140.0
+offset_right = -200.0
+offset_bottom = -140.0
 grow_horizontal = 2
 grow_vertical = 2
-theme_override_constants/separation = 28
+theme_override_constants/separation = 24
 alignment = 1
 
 [node name="Text" type="Label" parent="HungerOverlay/Box"]
@@ -441,10 +381,10 @@ autowrap_mode = 3
 
 [node name="Foods" type="VBoxContainer" parent="HungerOverlay/Box"]
 layout_mode = 2
-theme_override_constants/separation = 20
+theme_override_constants/separation = 16
 
 [node name="Skip" type="Button" parent="HungerOverlay/Box"]
-custom_minimum_size = Vector2(0, 132)
+custom_minimum_size = Vector2(0, 120)
 layout_mode = 2
 text = "CARRY ON WITHOUT FEEDING"
 
@@ -470,13 +410,13 @@ layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_left = 60.0
-offset_top = 200.0
-offset_right = -60.0
-offset_bottom = -200.0
+offset_left = 200.0
+offset_top = 100.0
+offset_right = -200.0
+offset_bottom = -100.0
 grow_horizontal = 2
 grow_vertical = 2
-theme_override_constants/separation = 24
+theme_override_constants/separation = 20
 alignment = 1
 
 [node name="Title" type="Label" parent="ResultOverlay/Box"]
@@ -507,21 +447,24 @@ text = ""
 horizontal_alignment = 1
 autowrap_mode = 3
 
-[node name="Buttons" type="VBoxContainer" parent="ResultOverlay/Box"]
+[node name="Buttons" type="HBoxContainer" parent="ResultOverlay/Box"]
 layout_mode = 2
 theme_override_constants/separation = 20
 
 [node name="Praise" type="Button" parent="ResultOverlay/Box/Buttons"]
-custom_minimum_size = Vector2(0, 132)
+custom_minimum_size = Vector2(0, 120)
 layout_mode = 2
+size_flags_horizontal = 3
 text = "PRAISE IT"
 
 [node name="Scold" type="Button" parent="ResultOverlay/Box/Buttons"]
-custom_minimum_size = Vector2(0, 132)
+custom_minimum_size = Vector2(0, 120)
 layout_mode = 2
+size_flags_horizontal = 3
 text = "SCOLD IT"
 
 [node name="Done" type="Button" parent="ResultOverlay/Box/Buttons"]
-custom_minimum_size = Vector2(0, 132)
+custom_minimum_size = Vector2(0, 120)
 layout_mode = 2
+size_flags_horizontal = 3
 text = "DONE"

@@ -106,8 +106,14 @@ func test_slice_activities_are_the_five_stat_trainers() -> void:
 
 func test_display_names_cover_every_activity() -> void:
 	assert_eq(Training.ACTIVITY_LABELS.size(), Training.Activity.size())
-	assert_eq(Training.display_name(Training.Activity.SIT_UPS), "SIT-UPS")
-	assert_eq(Training.display_name(Training.Activity.SPARRING), "SPARRING")
+	# Mission reskin: the enum keeps its old names (frozen); the labels are the
+	# drone-run disciplines.
+	assert_eq(Training.display_name(Training.Activity.SIT_UPS), "BANANA RATIONING")
+	assert_eq(Training.display_name(Training.Activity.SPARRING), "FULL DRILLS")
+	assert_eq(Training.display_name(Training.Activity.PUNCHBAG), "THREAT RESPONSE")
+	assert_eq(Training.display_name(Training.Activity.SKIPPING), "ZERO-G AGILITY")
+	assert_eq(Training.display_name(Training.Activity.RUNNING), "COMMS RELAY")
+	assert_eq(Training.display_name(Training.Activity.SHOPPING), "CONSOLE LITERACY")
 
 
 # --- the rhythm window (§4 [C]) ----------------------------------------------

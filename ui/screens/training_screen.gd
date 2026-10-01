@@ -54,21 +54,22 @@ const INTERRUPT_FOOD_SLOTS := 4
 
 @onready var _bg: ColorRect = $Bg
 @onready var _hud: HudBoxes = $Root/Col/Hud
-@onready var _stage: Control = $Root/Col/Stage
-@onready var _monkey_rig: Control = $Root/Col/Stage/MonkeyRig
-@onready var _trainer_rig: Control = $Root/Col/Stage/TrainerRig
-@onready var _rep_float: Label = $Root/Col/Stage/RepFloat
-@onready var _record_banner: Label = $Root/Col/Stage/RecordBanner
-@onready var _track: Control = $Root/Col/Rhythm/Track
-@onready var _early_zone: ColorRect = $Root/Col/Rhythm/Track/EarlyZone
-@onready var _band: ColorRect = $Root/Col/Rhythm/Track/Band
-@onready var _late_zone: ColorRect = $Root/Col/Rhythm/Track/LateZone
-@onready var _marker: ColorRect = $Root/Col/Rhythm/Track/Marker
-@onready var _legend_early: Label = $Root/Col/Rhythm/Legend/Early
-@onready var _legend_band: Label = $Root/Col/Rhythm/Legend/Band
-@onready var _legend_late: Label = $Root/Col/Rhythm/Legend/Late
-@onready var _verdict: Label = $Root/Col/Rhythm/Verdict
-@onready var _tally: Label = $Root/Col/Rhythm/Tally
+@onready var _stage: Control = $Root/Col/MainRow/Stage
+@onready var _monkey_rig: Control = $Root/Col/MainRow/Stage/MonkeyRig
+@onready var _trainer_rig: Control = $Root/Col/MainRow/Stage/TrainerRig
+@onready var _rep_float: Label = $Root/Col/MainRow/Stage/RepFloat
+@onready var _record_banner: Label = $Root/Col/MainRow/Stage/RecordBanner
+@onready var _readouts: VBoxContainer = $Root/Col/MainRow/Readouts
+@onready var _rhythm_section: VBoxContainer = $Root/Col/MainRow/Readouts/RhythmSection
+@onready var _rhythm_header: Label = $Root/Col/MainRow/Readouts/RhythmSection/Header
+@onready var _track: Control = $Root/Col/MainRow/Readouts/RhythmSection/Row/Track
+@onready var _good_zone: ColorRect = $Root/Col/MainRow/Readouts/RhythmSection/Row/Track/GoodZone
+@onready var _near_zone: ColorRect = $Root/Col/MainRow/Readouts/RhythmSection/Row/Track/NearZone
+@onready var _marker: ColorRect = $Root/Col/MainRow/Readouts/RhythmSection/Row/Track/Marker
+@onready var _legend_good: Label = $Root/Col/MainRow/Readouts/RhythmSection/Row/Legend/Good
+@onready var _legend_near: Label = $Root/Col/MainRow/Readouts/RhythmSection/Row/Legend/Near
+@onready var _verdict: Label = $Root/Col/MainRow/Readouts/Verdict
+@onready var _tally: Label = $Root/Col/MainRow/Readouts/Tally
 @onready var _message_panel: PanelContainer = $Root/Col/MessageBox
 @onready var _message: Label = $Root/Col/MessageBox/Text
 @onready var _tap_button: Button = $Root/Col/TapButton
@@ -198,24 +199,30 @@ func _monkey_name() -> String:
 ## The interest meter and the praise/scold row. Interest is the whole of the
 ## demonstration phase — without it the player has no idea whether tapping is
 ## achieving anything, which was the single worst thing about the old screen.
+##
+## In the landscape layout these live at the TOP of the readouts column, above
+## the rhythm section. Built in code so the .tscn stays a stable skeleton and
+## widgets that only exist for one of two session phases don't sit in the tree
+## as inert clutter.
 func _build_session_widgets() -> void:
-	var rhythm := $Root/Col/Rhythm as Control
-
 	_interest_label = Label.new()
 	_interest_label.text = "INTEREST"
-	rhythm.add_child(_interest_label)
+	_readouts.add_child(_interest_label)
+	_readouts.move_child(_interest_label, 0)
 
 	_interest_bar = ProgressBar.new()
-	_interest_bar.custom_minimum_size = Vector2(0, 44)
+	_interest_bar.custom_minimum_size = Vector2(0, 32)
 	_interest_bar.min_value = 0.0
 	_interest_bar.max_value = 1.0
 	_interest_bar.show_percentage = false
-	rhythm.add_child(_interest_bar)
+	_readouts.add_child(_interest_bar)
+	_readouts.move_child(_interest_bar, 1)
 
 	_coach_row = HBoxContainer.new()
-	_coach_row.add_theme_constant_override("separation", 24)
+	_coach_row.add_theme_constant_override("separation", 16)
 	_coach_row.visible = false
-	rhythm.add_child(_coach_row)
+	_readouts.add_child(_coach_row)
+	_readouts.move_child(_coach_row, 2)
 
 	_praise_live = Button.new()
 	_praise_live.text = "PRAISE"
@@ -257,7 +264,7 @@ func _on_joined_in() -> void:
 		return
 	# HAPPY, not RECORD: it has taken an interest, it has not achieved anything.
 	Sfx.play(Sfx.Cue.HAPPY)
-	_message.text = "%s IS COPYING YOU!" % _monkey_name()
+	_message.text = "%s IS COPYING THE DRONE!" % _monkey_name()
 	_verdict.text = "IT JOINED IN!"
 	_verdict.add_theme_color_override("font_color", Palette.SELECTION)
 	_refresh_coach_prompt()
@@ -305,14 +312,12 @@ func _apply_palette() -> void:
 	_record_banner.add_theme_color_override("font_color", Palette.SELECTION)
 	_record_banner.add_theme_font_size_override("font_size", Palette.FONT_TITLE)
 
-	_early_zone.color = Palette.BAD.darkened(0.35)
-	_band.color = Palette.GOOD
-	_late_zone.color = Palette.WARN.darkened(0.45)
-	_marker.color = Palette.INK_LIGHT
-	_legend_early.add_theme_color_override("font_color", Palette.BAD)
-	_legend_band.add_theme_color_override("font_color", Palette.GOOD)
-	_legend_late.add_theme_color_override("font_color", Palette.WARN)
-	for label in [_legend_early, _legend_band, _legend_late, _tally]:
+	_good_zone.color = Palette.GOOD
+	_near_zone.color = Palette.PANEL_DARK
+	_marker.color = Palette.SELECTION
+	_legend_good.add_theme_color_override("font_color", Palette.GOOD)
+	_legend_near.add_theme_color_override("font_color", Palette.INK_LIGHT.darkened(0.2))
+	for label in [_legend_good, _legend_near, _tally]:
 		label.add_theme_font_size_override("font_size", Palette.FONT_SMALL)
 	_verdict.add_theme_font_size_override("font_size", Palette.FONT_BODY)
 
@@ -324,10 +329,17 @@ func _apply_palette() -> void:
 	_lead_label.add_theme_font_size_override("font_size", 220)
 
 
-## Location colour per activity. Dossier §10 [C] lists the rooms: the gym has
-## the punchbag, running is the city park, sit-ups happen in the pink-walled
-## sit-ups room, and skipping is done out on the shopping street (§10 notes the
-## HUD hides for "street skipping").
+## Backdrop tint per discipline. The rooms of the original become training bays
+## on the ship; the palette constants keep their old names (frozen) and are
+## re-purposed by the mapping below.
+##   THREAT RESPONSE    -> gym-red        (weapons bay)
+##   ZERO-G AGILITY     -> street-grey    (hangar bars)
+##   BANANA RATIONING   -> pink           (shield brace room)
+##   COMMS RELAY        -> park-green     (long-range antenna deck)
+##   CONSOLE LITERACY   -> home-warm      (bridge sim)
+## Drone + monkey are TextureRects sourced from the prologue art, so per-part
+## tinting no longer applies — species colour used to live here and now falls
+## through until the monkey PNG is per-species.
 func _stage_colours() -> void:
 	var backdrop := Palette.LOC_GYM
 	match _activity:
@@ -345,23 +357,6 @@ func _stage_colours() -> void:
 	_paint(_stage, "Ground", backdrop.darkened(0.35))
 	_paint(_stage, "GroundLine", backdrop.darkened(0.55))
 	_paint(_stage, "Apparatus", Palette.ACCENT)
-	_paint(_stage, "TrainerRig/Legs", Palette.PANEL_DARK)
-	_paint(_stage, "TrainerRig/Body", Palette.ACCENT_ALT)
-	_paint(_stage, "TrainerRig/Head", Palette.PAPER)
-	_paint(_stage, "TrainerRig/Hair", Palette.INK)
-
-	var monkey := GameState.monkey()
-	var type := monkey.species_type if monkey != null else SpeciesDb.default_type()
-	var body := Palette.monkey_color(type)
-	var accent := Palette.monkey_accent(type)
-	_paint(_monkey_rig, "Tail", body.darkened(0.15))
-	_paint(_monkey_rig, "Body", body)
-	_paint(_monkey_rig, "Head", body)
-	_paint(_monkey_rig, "EarL", accent)
-	_paint(_monkey_rig, "EarR", accent)
-	_paint(_monkey_rig, "Face", accent)
-	_paint(_monkey_rig, "EyeL", Palette.INK)
-	_paint(_monkey_rig, "EyeR", Palette.INK)
 
 
 func _paint(root: Node, path: String, color: Color) -> void:
@@ -385,37 +380,51 @@ func _dark_box() -> StyleBoxFlat:
 
 # --- the rhythm track --------------------------------------------------------
 
-## Draw the window to scale from core's own numbers, so what the player aims at
-## is literally what `Training.classify_interval` will accept.
+## Bouncing metronome: the marker rises from the bottom to the top of the
+## track, bounces off, and falls back over one BEAT_INTERVAL. Success is a tap
+## on the peak — the GOOD band sits at the top and its height matches the beat
+## window so time-in-GOOD per cycle equals the interval slack core accepts.
+##
+## The oscillation is driven by `_elapsed` (session wall clock), not by
+## `_last_tap`, so the beat stays steady even when the player misses — you can
+## catch up on the next cycle without the track jumping to hide it.
 func _layout_track() -> void:
 	if not is_node_ready():
 		return
 	var window: Dictionary = Training.target_window()
-	var span: float = float(window["beat_interval"]) * TRACK_SPAN_BEATS
+	var beat: float = float(window["beat_interval"])
+	var band: float = float(window["window"])
 	var width := _track.size.x
 	var height := _track.size.y
-	if width <= 0.0 or span <= 0.0:
+	if width <= 0.0 or height <= 0.0 or beat <= 0.0:
 		return
-	var low := clampf(float(window["min_interval"]) / span, 0.0, 1.0) * width
-	var high := clampf(float(window["max_interval"]) / span, 0.0, 1.0) * width
 
-	_early_zone.position = Vector2.ZERO
-	_early_zone.size = Vector2(low, height)
-	_band.position = Vector2(low, 0.0)
-	_band.size = Vector2(maxf(8.0, high - low), height)
-	_late_zone.position = Vector2(high, 0.0)
-	_late_zone.size = Vector2(maxf(0.0, width - high), height)
-	_marker.size = Vector2(12.0, height)
+	# Time-above-threshold in a triangle wave 0→1→0 of period beat, when the
+	# threshold sits at (1 - good_frac) of the peak, is good_frac * beat. To
+	# make time-in-GOOD equal the core window (± band around the peak), set
+	# good_frac = 2 * band / beat.
+	var good_frac := clampf(2.0 * band / beat, 0.05, 0.6)
+	var good_h := good_frac * height
+
+	_good_zone.position = Vector2.ZERO
+	_good_zone.size = Vector2(width, good_h)
+	_near_zone.position = Vector2(0.0, good_h)
+	_near_zone.size = Vector2(width, height - good_h)
+	_marker.size = Vector2(width, 10.0)
 	_update_marker()
 
 
 func _update_marker() -> void:
-	var window: Dictionary = Training.target_window()
-	var span: float = float(window["beat_interval"]) * TRACK_SPAN_BEATS
-	var since := _elapsed - _last_tap if _phase == Phase.RUNNING else 0.0
-	var width := _track.size.x
-	var x := clampf(since / span, 0.0, 1.0) * (width - _marker.size.x)
-	_marker.position = Vector2(x, 0.0)
+	var beat: float = float(Training.target_window()["beat_interval"])
+	if beat <= 0.0:
+		return
+	# Triangle wave: pos = 0 at the bottom, 1 at the peak, 0 again at the next
+	# bottom, cycle = beat.
+	var phase := fposmod(_elapsed, beat) / beat
+	var pos := 1.0 - absf(phase * 2.0 - 1.0)
+	var height := _track.size.y
+	_marker.position = Vector2(0.0, (1.0 - pos) * (height - _marker.size.y))
+	_marker.visible = _phase == Phase.RUNNING or _phase == Phase.LEAD_IN
 
 
 # --- the session -------------------------------------------------------------
@@ -446,9 +455,9 @@ func _start_session() -> void:
 	_phase = Phase.RUNNING
 	_elapsed = 0.0
 	_last_tap = 0.0
-	_verdict.text = "SHOW IT HOW!"
+	_verdict.text = "GUIDE THE DRONE!"
 	_verdict.add_theme_color_override("font_color", Palette.SELECTION)
-	_message.text = "%s IS WATCHING YOU." % _monkey_name()
+	_message.text = "%s WATCHES THE DRONE." % _monkey_name()
 	_refresh_phase_ui()
 
 
@@ -521,7 +530,7 @@ func _register_tap() -> void:
 	_last_tap = _elapsed
 	_tap_times.append(_elapsed)
 	var verdict := GameState.training_tap(interval)
-	# YOU do the exercise. The monkey is watching.
+	# The drone bobs for the beat; the monkey watches.
 	_hop(_trainer_rig, -26.0)
 	_show_verdict(verdict)
 	_update_tally()
@@ -558,7 +567,7 @@ func _show_verdict(verdict: Training.TapVerdict) -> void:
 			_verdict.text = "GOOD!"
 			_verdict.add_theme_color_override("font_color", Palette.GOOD)
 		Training.TapVerdict.EARLY_CRAMP:
-			_verdict.text = "TOO FAST - YOU CRAMPED!"
+			_verdict.text = "TOO FAST - THE DRONE JAMMED!"
 			_verdict.add_theme_color_override("font_color", Palette.BAD)
 		Training.TapVerdict.LATE_BORED:
 			_verdict.text = "TOO SLOW - IT LOST INTEREST!"

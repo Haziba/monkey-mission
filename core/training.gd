@@ -41,8 +41,17 @@ const SLICE_ACTIVITIES: Array[int] = [
 	Activity.SHOPPING,
 ]
 
+## Mission reskin: the drone runs the drill; the monkey copies. Enum order and
+## the stat->activity map are frozen (see stat_for()); only the labels move.
+##   PUNCHBAG  -> THREAT RESPONSE   (POWER / WEAPONS)
+##   SKIPPING  -> ZERO-G AGILITY    (SPEED / PILOT)
+##   SIT-UPS   -> BANANA RATIONING  (STRENGTH-as-willpower / SHIELDS)
+##   RUNNING   -> COMMS RELAY       (STAMINA / ENGINES)
+##   SHOPPING  -> CONSOLE LITERACY  (KNOWLEDGE / SENSORS)
+##   SPARRING  -> FULL DRILLS       (all five, out of slice)
 const ACTIVITY_LABELS: PackedStringArray = [
-	"PUNCHBAG", "SKIPPING", "SIT-UPS", "RUNNING", "SHOPPING", "SPARRING",
+	"THREAT RESPONSE", "ZERO-G AGILITY", "BANANA RATIONING",
+	"COMMS RELAY", "CONSOLE LITERACY", "FULL DRILLS",
 ]
 
 ## How a single tap sat against the beat. Dossier §4 [C]: failure is two-sided —
@@ -167,6 +176,20 @@ const DISTRACT_DISCIPLINE_RELIEF := 0.85
 ## Reps per second while distracted, as a fraction of the normal rate.
 const DISTRACTED_REP_FRACTION := 0.25
 
+## An inexperienced monkey burns out mid-set. Per-second chance the working
+## monkey trips and sits down, ending the session early with a sad message.
+## Curve: chance = TRIP_CHANCE_PER_SECOND * (1 - fitness) ** 2. A fully-trained
+## monkey (fitness = 1, stat = cap) never trips; a fresh one (fitness = 0) has
+## the base rate and rarely lasts the session. DIVERGENCE: dossier §14.11 says
+## "no injury, illness, ageing or lifespan system" — this is a session-ending
+## fatigue event, not a lasting harm, so it stays inside the boundary.
+const TRIP_CHANCE_PER_SECOND := 0.10
+## Grace period after joining in: no trip check until the monkey has warmed up
+## for this many seconds. Stops it giving up before it's even started.
+const TRIP_GRACE_SECONDS := 3.0
+## Friendship cost of a trip. Small — it's disappointment, not a betrayal.
+const TRIP_FRIENDSHIP_COST := -1
+
 ## Discipline moves, dossier §4 [C]: praise a record, scold the chattering.
 ## Getting it right teaches; getting it wrong confuses and costs friendship.
 const DISCIPLINE_PER_GOOD_SCOLD := 4
@@ -263,6 +286,9 @@ class Session extends RefCounted:
 	var demo_accuracy: float = 0.0
 	## Set when the monkey is drifting and a scold would be deserved.
 	var distracted: bool = false
+	## Set when the monkey has given up mid-session — an inexperienced one that
+	## couldn't sustain the drill. The UI reads this to show the sad ending.
+	var tripped: bool = false
 	## Rep count at which the previous best was passed, so the UI can celebrate
 	## the moment rather than only the summary.
 	var beat_record_at: int = -1
@@ -273,6 +299,7 @@ class Session extends RefCounted:
 	var _total_taps: int = 0
 	var _rep_carry: float = 0.0
 	var _distract_carry: float = 0.0
+	var _trip_carry: float = 0.0
 	var _praises: int = 0
 	var _scolds: int = 0
 	var _discipline_delta: int = 0
@@ -562,6 +589,23 @@ func _tick_working(session: Session, delta: float) -> void:
 		if best > 0 and session.reps == best + 1 and session.beat_record_at < 0:
 			session.beat_record_at = session.reps
 
+	# Endurance check: an inexperienced monkey trips and sits down. Fitter
+	# monkeys never do — the (1 - fitness)^2 curve zeros out at cap.
+	var since_join := session.elapsed - session.time_to_join
+	if since_join >= TRIP_GRACE_SECONDS:
+		session._trip_carry += delta
+		while session._trip_carry >= 1.0:
+			session._trip_carry -= 1.0
+			var stat := stat_for(session.activity)
+			var cap := maxi(1, monkey.get_cap(stat))
+			var fitness := clampf(float(monkey.get_stat(stat)) / float(cap), 0.0, 1.0)
+			var lack := 1.0 - fitness
+			var chance := TRIP_CHANCE_PER_SECOND * lack * lack
+			if session._rng != null and session._rng.chance(chance):
+				session.tripped = true
+				session.state = Session.State.ENDED
+				return
+
 
 func _rep_rate(session: Session) -> float:
 	var monkey := session.monkey
@@ -615,7 +659,7 @@ func settle(session: Session) -> Result:
 		var refused := Result.new()
 		refused.activity = session.activity
 		refused.stat = stat_for(session.activity)
-		refused.message = "%s WATCHED, BUT NEVER JOINED IN." % monkey.monkey_name.to_upper()
+		refused.message = "%s WATCHED THE DRONE, BUT NEVER JOINED IN." % monkey.monkey_name.to_upper()
 		_apply_session_deltas(session, refused)
 		session_finished.emit(refused)
 		return refused
@@ -629,6 +673,13 @@ func settle(session: Session) -> Result:
 	score.late = session._late_taps
 	score.duration_s = session.elapsed
 	var result := perform(monkey, session.activity, score)
+	if session.tripped:
+		# Trip is a session-ending fatigue event, not a stat penalty — the reps
+		# earned still count. The player-facing consequence is a sad message
+		# and a small trust hit for pushing an inexperienced monkey too hard.
+		session._friendship_delta += TRIP_FRIENDSHIP_COST
+		result.message = "%s TRIPPED! IT SITS DOWN AND LOOKS SAD." \
+			% monkey.monkey_name.to_upper()
 	_apply_session_deltas(session, result)
 	return result
 
@@ -668,7 +719,7 @@ func perform(monkey: Monkey, activity: Activity, score: RhythmScore) -> Result:
 	# no input at all, which HG101 flags as a design flaw. This slice keeps input
 	# required: no taps, no session.
 	if score == null or not score.is_valid():
-		result.message = "%s WAITS FOR YOU TO SHOW IT HOW." % monkey.monkey_name
+		result.message = "%s WAITS FOR THE DRONE TO DEMONSTRATE." % monkey.monkey_name
 		session_finished.emit(result)
 		return result
 
