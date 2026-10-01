@@ -1,0 +1,62 @@
+[
+  {
+    "file": "parallax_far.png",
+    "size": "1536x1024",
+    "transparent": false,
+    "prompt": "A dark silhouetted jungle skyline seen from far away at dawn, a horizontal strip of layered tree tops and hanging vines with a hint of misty warm sky behind, tileable horizontally, the top half is soft sky and the bottom half is dense dark green-blue foliage silhouettes."
+  },
+  {
+    "file": "parallax_mid.png",
+    "size": "1536x1024",
+    "transparent": true,
+    "prompt": "A horizontal band of mid-distance jungle canopy: overlapping rounded clumps of bright green tropical leaves with darker greens behind, tileable horizontally, occupying the whole frame edge to edge, richly textured but readable as a foliage band. A single isolated object, centred, entirely within frame, on a fully transparent background, no ground, no shadow, no scenery."
+  },
+  {
+    "file": "front_trees.png",
+    "size": "1536x1024",
+    "transparent": true,
+    "prompt": "A dense wall of foreground jungle trees seen side-on: several tall straight brown tree trunks with hanging vines and clumps of big green leaves between them, gaps of dark shadow between the trunks big enough for a small animal to peek through, tileable horizontally, occupying the full height of the frame. A single isolated object, centred, entirely within frame, on a fully transparent background, no ground, no shadow, no scenery."
+  },
+  {
+    "file": "peek_monkey.png",
+    "size": "1024x1024",
+    "transparent": true,
+    "prompt": "The head and shoulders of a cheerful cartoon brown jungle monkey peeking out from behind something, tilted slightly to one side, big curious eyes, pale muzzle, looking at the viewer, only the head and one small hand showing. A single isolated object, centred, entirely within frame, on a fully transparent background, no ground, no shadow, no scenery."
+  },
+  {
+    "file": "peek_parrot.png",
+    "size": "1024x1024",
+    "transparent": true,
+    "prompt": "The head of a bright red and yellow tropical parrot peeking out from behind something, big round eye, chunky curved beak, a few showy tail feathers visible, tilted to one side. A single isolated object, centred, entirely within frame, on a fully transparent background, no ground, no shadow, no scenery."
+  },
+  {
+    "file": "peek_sloth.png",
+    "size": "1024x1024",
+    "transparent": true,
+    "prompt": "The head of a slow sleepy cartoon three-toed sloth peeking out sideways, little smile, tufty grey-brown fur, one paw holding a branch stub, only the head and paw showing. A single isolated object, centred, entirely within frame, on a fully transparent background, no ground, no shadow, no scenery."
+  },
+  {
+    "file": "mango.png",
+    "size": "1024x1024",
+    "transparent": true,
+    "prompt": "A single ripe orange-red mango fruit with a small green leaf on its short stem, seen from the side, glossy skin, plump teardrop shape. A single isolated object, centred, entirely within frame, on a fully transparent background, no ground, no shadow, no scenery."
+  },
+  {
+    "file": "peach.png",
+    "size": "1024x1024",
+    "transparent": true,
+    "prompt": "A single round pink and yellow peach with a small green leaf on top, seen from the side, soft fuzzy skin, ripe. A single isolated object, centred, entirely within frame, on a fully transparent background, no ground, no shadow, no scenery."
+  },
+  {
+    "file": "enemy_monkey.png",
+    "size": "1024x1024",
+    "transparent": true,
+    "prompt": "A cartoon brown jungle monkey caught mid-leap through the air, arms outstretched forward reaching to grab, mouth open in a determined shout, long tail streaming behind, side-on view, motion pose. A single isolated object, centred, entirely within frame, on a fully transparent background, no ground, no shadow, no scenery."
+  },
+  {
+    "file": "branch_obstacle.png",
+    "size": "1024x1536",
+    "transparent": true,
+    "prompt": "A narrow vertical jungle branch hanging straight down from an off-frame canopy: a rough brown bark stem tapering slightly from top to bottom, occupying only the middle third of the frame width, and at the very bottom end a dense round bush of dark green leaves the same width as the frame \u2014 the bush is much wider than the stem, hangs like a heavy pom-pom, and is the obvious eye-catching feature. A single isolated object, centred, entirely within frame, on a fully transparent background, no ground, no shadow, no scenery."
+  }
+]

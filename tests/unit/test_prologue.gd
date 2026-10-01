@@ -3,9 +3,10 @@ extends "res://tests/framework/ui_test_case.gd"
 ## The playable prologue — `prologue_forage.gd` and `prologue_trap.gd`.
 ##
 ## Two screens' worth of animation is not testable and should not be. What is
-## testable is the handful of rules a player can actually lose to: where the fake
-## perspective puts a tap target, and who is standing under the dish when it
-## lands. Both are static functions on their screen for exactly that reason.
+## testable is the handful of rules a player can actually lose to: whether a
+## drone touching a fruit box counts as a pickup, and who is standing under the
+## dish when it lands. Both live on their screen as static functions for exactly
+## that reason.
 ##
 ## The mount tests are here because the prologue is now on the NEW GAME route.
 ## A prologue that fails to instantiate is a game that cannot be started.
@@ -17,40 +18,27 @@ const TRAP_SCENE := "res://ui/screens/prologue_trap.tscn"
 const ForageScript := preload("res://ui/screens/prologue_forage.gd")
 const TrapScript := preload("res://ui/screens/prologue_trap.gd")
 
-const SCREEN := Vector2(1920.0, 880.0)
+
+# --- the side-scrolling flight ----------------------------------------------
+
+func test_axis_aligned_boxes_overlap_only_when_they_actually_touch() -> void:
+	# The one rule a fruit pickup / branch hit rides on. Under both should
+	# collide; separated on either axis should not.
+	assert_true(ForageScript.rects_overlap(
+		Vector2(100, 100), Vector2(20, 20),
+		Vector2(110, 105), Vector2(20, 20)))
+	assert_false(ForageScript.rects_overlap(
+		Vector2(100, 100), Vector2(20, 20),
+		Vector2(150, 100), Vector2(20, 20)))
+	assert_false(ForageScript.rects_overlap(
+		Vector2(100, 100), Vector2(20, 20),
+		Vector2(100, 150), Vector2(20, 20)))
 
 
-# --- the flight's fake perspective -------------------------------------------
-
-func test_depth_scale_is_full_size_at_the_camera_and_shrinks_with_depth() -> void:
-	assert_almost_eq(ForageScript.depth_scale(0.0), 1.0, 0.0001,
-		"the camera plane is the unit size")
-	var previous := 1.0
-	for step in 10:
-		var s: float = ForageScript.depth_scale(float(step + 1) * 0.1)
-		assert_true(s < previous, "depth %.1f did not shrink" % (float(step + 1) * 0.1))
-		assert_true(s > 0.0, "scale must stay positive or sprites invert")
-		previous = s
-
-
-func test_everything_converges_on_the_vanishing_point() -> void:
-	# A banana in the far left lane still spawns near the middle of the screen —
-	# that convergence IS the illusion, and it is what makes a far banana a
-	# smaller tap target than a near one.
-	var far: Vector2 = ForageScript.project(1.0, -1.0, 0.0, SCREEN)
-	var near: Vector2 = ForageScript.project(0.0, -1.0, 0.0, SCREEN)
-	assert_true(absf(far.x - SCREEN.x * 0.5) < absf(near.x - SCREEN.x * 0.5),
-		"the far point should sit closer to the centre line")
-	assert_almost_eq(near.x, 0.0, 0.5, "lane -1 at the camera plane is the left edge")
-	# Depth alone never moves anything off the horizon line.
-	assert_almost_eq(far.y, near.y, 0.5, "world_y 0 is the horizon at every depth")
-
-
-func test_the_ground_stays_below_the_horizon_at_every_depth() -> void:
-	var horizon := SCREEN.y * ForageScript.HORIZON
-	for step in 11:
-		var at: Vector2 = ForageScript.project(float(step) * 0.1, 0.0, 0.52, SCREEN)
-		assert_true(at.y > horizon, "the ground rose above the horizon at z=%.1f" % (step * 0.1))
+func test_boosting_burns_more_fuel_than_cruising() -> void:
+	# The boost has to cost strictly more than moving the same second without
+	# it, or the optimum play is to hold it down for the whole flight.
+	assert_true(ForageScript.fuel_drain_for(true) > ForageScript.fuel_drain_for(false))
 
 
 # --- the trap ----------------------------------------------------------------
